@@ -10,7 +10,7 @@ export default function LanguageSelectionScreen() {
   const handleContinue = () => {
     // Save selected language to AsyncStorage or context if needed
     // Then navigate
-    router.replace('/welcome-screen'); // or wherever you want to go next
+    router.replace('/(tabs)'); // or wherever you want to go next
   };
 
   return (

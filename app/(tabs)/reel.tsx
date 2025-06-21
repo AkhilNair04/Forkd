@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function HomeScreen() {
+export default function ReelScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Welcome to Fork&apos;d!</Text>
-      <Text style={styles.subtext}>homeeee</Text>
+      <Text style={styles.subtext}>Reeellll</Text>
     </View>
   );
 }
