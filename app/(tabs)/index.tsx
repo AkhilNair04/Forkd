@@ -7,6 +7,7 @@ const ROUTES = {
   WELCOME: '/welcome-screen',
   HOME: '/(tabs)',
   LANG_SELECT: '/select-lang',
+  SELECT_USER: '/select-user',
 };
 
 export default function Index() {
@@ -36,6 +37,5 @@ export default function Index() {
     );
   }
 
-  // ✅ Use type assertion to silence the TS error
   return <Redirect href={initialRoute as Parameters<typeof Redirect>[0]['href']} />;
 }

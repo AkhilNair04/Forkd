@@ -1,34 +1,37 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useRouter } from 'expo-router';
 
 export default function LanguageSelectionScreen() {
   const router = useRouter();
-  const [selectedLanguage, setSelectedLanguage] = useState<'English' | 'Spanish' | 'French'>('English');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('English');
 
   const handleContinue = () => {
-    // Save selected language to AsyncStorage or context if needed
-    // Then navigate
-    router.replace('/welcome-screen'); // or wherever you want to go next
+    router.replace('/select-user');
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Select your display language:</Text>
-      <View style={styles.pickerContainer}>
+
+      <View style={styles.pickerWrapper}>
         <Picker
           selectedValue={selectedLanguage}
           onValueChange={(itemValue) => setSelectedLanguage(itemValue)}
           style={styles.picker}
-          dropdownIconColor="#fff"
+          dropdownIconColor="#C67C4E"
           mode="dropdown"
         >
-          <Picker.Item label="English" value="English" />
-          <Picker.Item label="Spanish" value="Spanish" />
-          <Picker.Item label="French" value="French" />
+          <Picker.Item label="English (default)" value="English" />
+          <Picker.Item label="Hindi" value="Hindi" />
+          <Picker.Item label="Malayalam" value="Malayalam" />
+          <Picker.Item label="Tamil" value="Tamil" />
+          <Picker.Item label="Kannada" value="Kannada" />
+          <Picker.Item label="Telugu" value="Telugu" />
         </Picker>
       </View>
+
       <TouchableOpacity style={styles.button} onPress={handleContinue}>
         <Text style={styles.buttonText}>Continue</Text>
       </TouchableOpacity>
@@ -47,29 +50,37 @@ const styles = StyleSheet.create({
   title: {
     color: '#fff',
     fontSize: 24,
-    marginBottom: 20,
+    marginBottom: 30,
     textAlign: 'center',
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#fff',
-    borderRadius: 5,
-    marginBottom: 20,
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 50,
-    width: 200,
-    color: '#fff',
-    backgroundColor: '#1a1a1a',
-  },
+  pickerWrapper: {
+  borderWidth: 1,
+  borderColor: '#C67C4E',
+  borderRadius: 12,
+  marginBottom: 30,
+  backgroundColor: '#1a1a1a',
+  width: 300, // Increased width to prevent text clipping
+  ...Platform.select({
+    android: {
+      overflow: 'hidden',
+    },
+  }),
+},
+picker: {
+  height: 55, // Slightly taller
+  color: '#fff',
+  width: '100%',
+},
   button: {
-    backgroundColor: '#A0522D',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: '#C67C4E',
+    paddingVertical: 14,
+    paddingHorizontal: 50,
+    borderRadius: 10,
+    alignItems: 'center',
   },
   buttonText: {
     color: '#fff',
     fontSize: 18,
+    fontWeight: 'bold',
   },
 });

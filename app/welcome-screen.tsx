@@ -7,7 +7,7 @@ const WelcomeScreen: React.FC = () => {
   const router = useRouter();
 
   const handleGetStarted = () => {
-    router.push('/select-lang'); // Navigate to select-lang.tsx
+    router.push('/select-lang');
   };
 
   return (
