@@ -10,32 +10,14 @@ const ROUTES = {
   SELECT_USER: '/select-user',
 };
 
-export default function Index() {
-  const [initialRoute, setInitialRoute] = useState<string | null>(null);
-
-  useEffect(() => {
-    const checkAppLaunch = async () => {
-      const hasLaunched = await AsyncStorage.getItem('hasLaunched');
-      const isLoggedIn = await AsyncStorage.getItem('isLoggedIn');
-
-      if (!hasLaunched) {
-        await AsyncStorage.setItem('hasLaunched', 'true');
-        setInitialRoute(ROUTES.WELCOME);
-      } else {
-        setInitialRoute(isLoggedIn === 'true' ? ROUTES.HOME : ROUTES.WELCOME);
-      }
-    };
-
-    checkAppLaunch();
-  }, []);
-
-  if (!initialRoute) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
+export default function HomeScreen() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.text}>Welcome to Fork&apos;d!</Text>
+      <Text style={styles.subtext}>homeeee</Text>
+    </View>
+  );
+}
 
   return <Redirect href={initialRoute as Parameters<typeof Redirect>[0]['href']} />;
 }
