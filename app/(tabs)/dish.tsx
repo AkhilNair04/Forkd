@@ -161,7 +161,7 @@ export default function DishScreen() {
                   style={styles.arrowButton}
                   onPress={() =>
                     router.push({
-                      pathname: '/dish-details/[dishId]',
+                      pathname: '../dish-details/[dishId]',
                       params: { dishId: item.id },
                     })
                   }
