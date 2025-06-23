@@ -1,53 +1,77 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { ComponentProps } from 'react';
-import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import AntDesign from '@expo/vector-icons/AntDesign'; // 👈 New import
+// import { ComponentProps } from 'react';
+import { OpaqueColorValue, StyleProp, TextStyle } from 'react-native';
 
-// Define your mapping of SF Symbol names to Material Icons names
+// Define your mapping of icon names
 const MAPPING = {
   'house.fill': 'home',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
-  
-  // Custom icons
-  'chef.hat': 'restaurant',
   'dish.fill': 'dining',
-  'reel.fill': 'movie',
+  'reel.fill': 'video-library',
   'person.fill': 'person',
+  // 'caretdown' is intentionally omitted from MaterialIcons mapping
 } as const;
 
-// Create types based on your mapping
-type IconName = keyof typeof MAPPING;
-type MaterialIconName = typeof MAPPING[IconName];
+type IconName = keyof typeof MAPPING | 'caretdown';
 
 type IconSymbolProps = {
-  name: IconName;
+  name: IconName | 'chef.hat';
   size?: number;
   color: string | OpaqueColorValue;
   style?: StyleProp<TextStyle>;
-  weight?: never; // Not supported in MaterialIcons
+  weight?: never;
 };
 
-/**
- * An icon component that uses Material Icons as a fallback for SF Symbols.
- * Only supports the icons defined in the MAPPING object.
- */
 export function IconSymbol({
   name,
   size = 24,
   color,
   style,
 }: IconSymbolProps) {
-  const materialIconName = MAPPING[name];
-  return (
-    <MaterialIcons 
-      name={materialIconName}
-      size={size}
-      color={color}
-      style={style}
-    />
-  );
+  // 👨‍🍳 Special case for chef icon (MaterialCommunityIcons)
+  if (name === 'chef.hat') {
+    return (
+      <MaterialCommunityIcons
+        name="chef-hat"
+        size={size}
+        color={color}
+        style={style}
+      />
+    );
+  }
+
+  // ⬇️ Special case for caretdown (AntDesign)
+  if (name === 'caretdown') {
+    return (
+      <AntDesign
+        name="caretdown"
+        size={size}
+        color={color}
+        style={style}
+      />
+    );
+  }
+
+  // Default to MaterialIcons for mapped names only
+  if (name in MAPPING) {
+    const materialIconName = MAPPING[name as keyof typeof MAPPING];
+    return (
+      <MaterialIcons
+        name={materialIconName}
+        size={size}
+        color={color}
+        style={style}
+      />
+    );
+  }
+
+  // Should never reach here, but fallback to null
+  return null;
 }
 
-// Optional: Export the type of available icon names
+// Optional: export allowed names
 export type { IconName as IconSymbolName };
