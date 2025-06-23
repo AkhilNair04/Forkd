@@ -4,9 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ActivityIndicator, View } from 'react-native';
 
 const ROUTES = {
-  WELCOME: '/welcome-screen',
+  WELCOME: '(auth)/welcome-screen',
   HOME: '/(tabs)',
-  LANG_SELECT: '/select-lang',
+  LANG_SELECT: '(auth)/select-lang',
 };
 
 export default function Index() {

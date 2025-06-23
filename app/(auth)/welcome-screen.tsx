@@ -13,7 +13,7 @@ const WelcomeScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <ImageBackground
-        source={require('../assets/images/chef-cooking-pic.png')}
+        source={require('../../assets/images/chef-cooking-pic.png')}
         style={styles.image}
       >
         <LinearGradient
