@@ -17,13 +17,14 @@ export default function TabLayout() {
         tabBarStyle: {
           position: 'absolute',
           bottom: 0,
+          width: '100%',
           left: 20,
           right: 20,
           elevation: 10,
           backgroundColor: '#2c2c2c', // dark background
           borderTopLeftRadius: 25,
           borderTopRightRadius: 25,
-          height: 70,
+          height: 65,
           borderTopWidth: 0,
           shadowColor: '#000',
           shadowOpacity: 0.1,

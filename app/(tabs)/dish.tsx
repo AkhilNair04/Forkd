@@ -1,6 +1,25 @@
+import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Ionicons } from '@expo/vector-icons';
-import { Stack } from 'expo-router';
-import { FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { router, Stack } from 'expo-router';
+import {
+  FlatList,
+  Image,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const addresses = [
+  "1234 Culinary Street, Flavor Town, Near Food Plaza, Opp. Tasty Tower, Apt 56, Delight City, Gourmet State",
+  "Home Adress"
+];
+
+const selectedAddress = addresses[0].split(' ').slice(0, 4).join(' ') + '...';
+
 
 const dishes = [
   {
@@ -32,24 +51,46 @@ const dishes = [
     image: 'https://images.pexels.com/photos/1199957/pexels-photo-1199957.jpeg',
   },
   {
-    id: '4',
-    name: 'Tteokbokki',
-    cuisine: 'Korean Cuisine',
-    rating: 4.2,
-    image: 'https://images.pexels.com/photos/1199957/pexels-photo-1199957.jpeg',
-  },{
-    id: '4',
+    id: '5',
     name: 'Tteokbokki',
     cuisine: 'Korean Cuisine',
     rating: 4.2,
     image: 'https://images.pexels.com/photos/1199957/pexels-photo-1199957.jpeg',
   },
   {
-    id: '4',
+    id: '6',
     name: 'Tteokbokki',
     cuisine: 'Korean Cuisine',
     rating: 4.2,
     image: 'https://images.pexels.com/photos/1199957/pexels-photo-1199957.jpeg',
+  },
+  {
+    id: '7',
+    name: 'Tteokbokki',
+    cuisine: 'Korean Cuisine',
+    rating: 4.2,
+    image: 'https://images.pexels.com/photos/1199957/pexels-photo-1199957.jpeg',
+  },
+  {
+    id: '8',
+    name: 'Tteokbokki',
+    cuisine: 'Korean Cuisine',
+    rating: 4.2,
+    image: 'https://images.pexels.com/photos/1199957/pexels-photo-1199957.jpeg',
+  },
+  {
+    id: '9',
+    name: 'Rigatoni Pasta',
+    cuisine: 'Italian Cuisine',
+    rating: 4.5,
+    image: 'https://images.pexels.com/photos/842571/pexels-photo-842571.jpeg',
+  },
+  {
+    id: '10',
+    name: 'Rigatoni Pasta',
+    cuisine: 'Italian Cuisine',
+    rating: 4.5,
+    image: 'https://images.pexels.com/photos/842571/pexels-photo-842571.jpeg',
   },
 ];
 
@@ -57,15 +98,28 @@ export default function DishScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.container}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#111111' }} edges={['top', 'bottom']}>
+          <StatusBar barStyle="light-content" backgroundColor="#000000" />
+          <View style={styles.container}>
         <View style={styles.topBar}>
-          <Text style={styles.addressText}>DELIVER TO
-            <Text style={{ fontWeight: 'bold' }}> Home address....</Text>
-          </Text>
+          <View>
+            <View style={styles.row}>
+              <Text style={styles.deliverText}>DELIVER TO</Text>
+              <IconSymbol name="caretdown" size={12} color="#C67C4E" style={{marginLeft:4}} />
+
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.address}>{selectedAddress}</Text>
+              <Ionicons name="chevron-down" size={14} color="#1a1a1a" style={{ marginLeft: 6 }} />
+            </View>
+          </View>
+
           <View style={styles.icons}>
             <View style={styles.badgeWrapper}>
               <Ionicons name="chatbubble-ellipses-outline" size={24} color="white" />
-              <View style={styles.badge}><Text style={styles.badgeText}>2</Text></View>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>2</Text>
+              </View>
             </View>
             <Ionicons name="cart-outline" size={24} color="white" style={{ marginLeft: 16 }} />
           </View>
@@ -89,7 +143,7 @@ export default function DishScreen() {
         <Text style={styles.sectionTitle}>All Dishes</Text>
         <FlatList
           data={dishes}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           numColumns={2}
           columnWrapperStyle={{ justifyContent: 'space-between' }}
           contentContainerStyle={{ paddingBottom: 120 }}
@@ -103,7 +157,15 @@ export default function DishScreen() {
                   <Ionicons name="star" size={16} color="#FDC913" />
                   <Text style={styles.rating}>{item.rating}</Text>
                 </View>
-                <TouchableOpacity style={styles.arrowButton}>
+                <TouchableOpacity
+                  style={styles.arrowButton}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/dish-details/[dishId]',
+                      params: { dishId: item.id },
+                    })
+                  }
+                >
                   <Ionicons name="arrow-forward" size={16} color="white" />
                 </TouchableOpacity>
               </View>
@@ -111,6 +173,8 @@ export default function DishScreen() {
           )}
         />
       </View>
+        </SafeAreaView>
+      
     </>
   );
 }
@@ -126,11 +190,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 40,
+    marginBottom: 16,
   },
-  addressText: {
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  deliverText: {
+    color: '#C67C4E',
+    fontSize: 13,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  address: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: '500',
   },
   icons: {
     flexDirection: 'row',
