@@ -7,9 +7,9 @@ export default function NewReturningScreen() {
 
   const handlePress = (type: 'new' | 'returning') => {
     if (type === 'new') {
-      router.replace('/select-user'); // or wherever new users go next
+      router.replace('/signup'); // or wherever new users go next
     } else {
-      router.replace('/'); // or your actual login screen route
+      router.replace('/login'); // or your actual login screen route
     }
   };
 
@@ -42,10 +42,14 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     width: '85%',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
+    textAlign: 'center',
+    includeFontPadding: false, // Android-specific tweak for vertical centering
+    textAlignVertical: 'center',
   },
 });

@@ -13,7 +13,7 @@ export default function LoginScreen() {
 
   const handleAltLogin = () => {
     // Navigate to alternate login (e.g., email or social)
-    router.replace('/'); // adjust as needed
+    router.replace('/email-login'); // adjust as needed
   };
 
   return (

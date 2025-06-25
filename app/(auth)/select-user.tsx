@@ -1,16 +1,20 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SelectUserScreen() {
   const router = useRouter();
 
-  const handleRoleSelect = (role: 'Customer' | 'Chef') => {
-    // Save role to context or AsyncStorage if needed
-    if (role === 'Customer') {
-      router.replace('/customer-onboarding'); // Make sure this file exists
-    } else {
-      router.replace('/chef-onboarding'); // Make sure this file exists
+  const handleRoleSelect = async (role: 'Customer' | 'Chef') => {
+    try {
+      // Save role to AsyncStorage
+      await AsyncStorage.setItem('userRole', role);
+
+      // Navigate to newreturning page
+      router.replace('/newreturning'); // Adjust if your route is different
+    } catch (error) {
+      console.error('Error saving role:', error);
     }
   };
 
