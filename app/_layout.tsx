@@ -24,6 +24,7 @@ export default function RootLayout() {
         <Stack.Screen name="welcome-screen" options={{headerShown:false}}/>
         <Stack.Screen name="select-lang" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="favorites" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
