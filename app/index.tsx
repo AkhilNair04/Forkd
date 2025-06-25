@@ -7,6 +7,8 @@ const ROUTES = {
   WELCOME: '(auth)/welcome-screen',
   HOME: '/(tabs)',
   LANG_SELECT: '(auth)/select-lang',
+  NEW_OR_RETURNING: '(auth)/newreturning',
+  LOGIN: '(auth)/login',
 };
 
 export default function Index() {
