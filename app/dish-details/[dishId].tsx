@@ -98,6 +98,8 @@ export default function DishDetailScreen() {
   const [quantity, setQuantity] = useState(1);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedSort, setSelectedSort] = useState("Sort By:");
+  const [selectedChef, setSelectedChef] = useState<string | null>(null);
+
 
   const sortOptions = [
     "Ratings (high to low)",
@@ -198,25 +200,38 @@ export default function DishDetailScreen() {
               data={dish.chefs}
               keyExtractor={(_, index) => index.toString()}
               scrollEnabled={false} // Important: prevents inner scroll clash with ScrollView
-              renderItem={({ item }) => (
-                <View style={styles.chefCard}>
-                  <Image source={{ uri: item.avatar }} style={styles.avatar} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.chefName}>{item.name}</Text>
+              renderItem={({ item }) => {
+                const isSelected = selectedChef === item.name;
+                return (
+                    <TouchableOpacity
+                        onPress={() => setSelectedChef(item.name)}
+                        style={[
+                        styles.chefCard,
+                        isSelected && styles.selectedChefCard, // apply style if selected
+                    ]}
+                  >
+      <Image source={{ uri: item.avatar }} style={styles.avatar} />
+      <View style={{ flex: 1 }}>
+        <Text style={styles.chefName}>{item.name}</Text>
 
-                    <View style={styles.ratingPriceRow}>
-                      <View style={styles.chefRatingContainer}>
-                        <Ionicons name="star" size={16} color="#FDC913" />
-                        <Text style={styles.rating}>{item.rating}</Text>
-                        <Text style={styles.reviews}>({item.reviews})</Text>
-                      </View>
-                    </View>
-                  </View>
+        <View style={styles.ratingPriceRow}>
+          <View style={styles.chefRatingContainer}>
+            <Ionicons name="star" size={16} color="#FDC913" />
+            <Text style={styles.rating}>{item.rating}</Text>
+            <Text style={styles.reviews}>({item.reviews})</Text>
+          </View>
+        </View>
+      </View>
 
-                  <Text style={styles.priceText}>₹{item.price * quantity}</Text>
-                </View>
-              )}
+      <Text style={styles.priceText}>₹{item.price * quantity}</Text>
+    </TouchableOpacity>
+  );
+}}
+
             />
+            <TouchableOpacity style={styles.orderButton} >
+              <Text style={styles.orderButtonText}>Place Order</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -314,7 +329,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  sortContainer: {
+    sortContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
@@ -409,5 +424,20 @@ priceText: {
   fontWeight: '600',
   color: '#1a1a1a',
   marginLeft: 10,
+},
+orderButton: {
+    backgroundColor: "#C67C4E",
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  orderButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  selectedChefCard: {
+  backgroundColor: "#C67C4E",
 },
 });
