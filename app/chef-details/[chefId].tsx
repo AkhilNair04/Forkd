@@ -14,37 +14,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { chefs } from "@/constants/chefData";
 
-const chefs = [
-  {
-    id: "1",
-    name: "Chef Anna P",
-    specialties: ["Italian", "French"],
-    rating: 4.7,
-    image: "https://randomuser.me/api/portraits/women/65.jpg",
-    pricePerHour: 450,
-    verified: true,
-    availableTimes: [
-      { label: "Breakfast", available: false },
-      { label: "Lunch", available: true },
-      { label: "Dinner", available: true },
-    ],
-  },
-  {
-    id: "2",
-    name: "Chef Ravi K",
-    specialties: ["Indian", "Thai"],
-    rating: 4.5,
-    image: "https://randomuser.me/api/portraits/men/66.jpg",
-    pricePerHour: 400,
-    verified: false,
-    availableTimes: [
-      { label: "Breakfast", available: false },
-      { label: "Lunch", available: true },
-      { label: "Dinner", available: false },
-    ],
-  },
-];
 
 export default function ChefDetails() {
   const { chefId } = useLocalSearchParams();
