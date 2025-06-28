@@ -1,0 +1,76 @@
+// constants/chefData.ts
+
+export const chefs = [
+  {
+    id: "1",
+    name: "Chef Anna P",
+    specialties: ["Italian", "French"],
+    cuisine: "Italian Cuisine", // for listing
+    rating: 4.9,
+    reviews: 210,
+    image: "https://randomuser.me/api/portraits/women/65.jpg",
+    avatar: "https://randomuser.me/api/portraits/women/68.jpg", // fallback if needed
+    pricePerHour: 450,
+    verified: true,
+    isFavorite: true,
+    availableTimes: [
+      { label: "Breakfast", available: false },
+      { label: "Lunch", available: true },
+      { label: "Dinner", available: true },
+    ],
+  },
+  {
+    id: "2",
+    name: "Chef Ravi K",
+    specialties: ["Indian", "Thai"],
+    cuisine: "Indian Cuisine",
+    rating: 4.6,
+    reviews: 178,
+    image: "https://randomuser.me/api/portraits/men/66.jpg",
+    avatar: "https://randomuser.me/api/portraits/men/45.jpg",
+    pricePerHour: 400,
+    verified: false,
+    isFavorite: false,
+    availableTimes: [
+      { label: "Breakfast", available: false },
+      { label: "Lunch", available: true },
+      { label: "Dinner", available: false },
+    ],
+  },
+  {
+    id: "3",
+    name: "Chef Priya K",
+    specialties: ["Indian"],
+    cuisine: "Indian Cuisine",
+    rating: 4.3,
+    reviews: 112,
+    image: "https://randomuser.me/api/portraits/women/68.jpg",
+    avatar: "https://randomuser.me/api/portraits/women/68.jpg",
+    pricePerHour: 420,
+    verified: true,
+    isFavorite: true,
+    availableTimes: [
+      { label: "Breakfast", available: true },
+      { label: "Lunch", available: true },
+      { label: "Dinner", available: true },
+    ],
+  },
+  {
+    id: "4",
+    name: "Chef John D",
+    specialties: ["American"],
+    cuisine: "American Cuisine",
+    rating: 4.6,
+    reviews: 178,
+    image: "https://randomuser.me/api/portraits/men/47.jpg",
+    avatar: "https://randomuser.me/api/portraits/men/47.jpg",
+    pricePerHour: 390,
+    verified: false,
+    isFavorite: false,
+    availableTimes: [
+      { label: "Breakfast", available: true },
+      { label: "Lunch", available: false },
+      { label: "Dinner", available: true },
+    ],
+  },
+];

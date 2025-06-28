@@ -1,0 +1,63 @@
+// components/HeaderSection.tsx
+import { IconSymbol } from "@/components/ui/IconSymbol";
+import { Ionicons } from "@expo/vector-icons";
+import { Text, TouchableOpacity, View, StyleSheet } from "react-native";
+
+export default function HeaderSection({ address }: { address: string }) {
+  return (
+    <View style={styles.topBar}>
+      <View>
+        <View style={styles.row}>
+          <Text style={styles.deliverText}>DELIVER TO</Text>
+          <IconSymbol
+            name="caretdown"
+            size={12}
+            color="#C67C4E"
+            style={{ marginLeft: 4 }}
+          />
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.address}>{address}</Text>
+        </View>
+      </View>
+      <View style={styles.icons}>
+        <TouchableOpacity style={styles.badgeWrapper}>
+          <Ionicons name="chatbubble-ellipses-outline" size={24} color="white" />
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>2</Text>
+          </View>
+        </TouchableOpacity>
+        <Ionicons name="cart-outline" size={24} color="white" style={{ marginLeft: 16 }} />
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  row: { flexDirection: "row", alignItems: "center", marginTop: 10 },
+  deliverText: {
+    color: "#C67C4E",
+    fontSize: 13,
+    fontWeight: "bold",
+    letterSpacing: 1,
+  },
+  address: { color: "#fff", fontSize: 16, fontWeight: "500" },
+  icons: { flexDirection: "row", alignItems: "center" },
+  badgeWrapper: { position: "relative" },
+  badge: {
+    position: "absolute",
+    top: -7,
+    right: -8,
+    backgroundColor: "#C67C4E",
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  badgeText: { color: "#fff", fontSize: 10 },
+});

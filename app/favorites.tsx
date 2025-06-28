@@ -11,89 +11,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { chefs as favoriteChefs } from "@/constants/chefData";
+import { dishes } from "@/constants/dishData";
 
-const favoriteDishes = [
-  {
-    id: "dish-1",
-    name: "Rigatoni Pasta",
-    cuisine: "Italian",
-    rating: 4.7,
-    image: "https://images.pexels.com/photos/842571/pexels-photo-842571.jpeg",
-  },
-  {
-    id: "dish-2",
-    name: "Butter Chicken",
-    cuisine: "Indian",
-    rating: 4.8,
-    image: "https://images.pexels.com/photos/842571/pexels-photo-842571.jpeg",
-  },
-  {
-    id: "6",
-    name: "Tteokbokki",
-    cuisine: "Korean Cuisine",
-    rating: 4.2,
-    image: "https://images.pexels.com/photos/1199957/pexels-photo-1199957.jpeg",
-  },
-];
 
-const favoriteChefs = [
-  {
-    id: "chef-1",
-    name: "Chef Anna P",
-    rating: 4.9,
-    reviews: 210,
-    avatar: "https://randomuser.me/api/portraits/women/68.jpg",
-  },
-  {
-    id: "chef-2",
-    name: "Chef John D",
-    rating: 4.6,
-    reviews: 178,
-    avatar: "https://randomuser.me/api/portraits/men/45.jpg",
-  },
-  {
-    id: "chef-3",
-    name: "Chef John D",
-    rating: 4.6,
-    reviews: 178,
-    avatar: "https://randomuser.me/api/portraits/men/46.jpg",
-  },{
-    id: "chef-4",
-    name: "Chef John D",
-    rating: 4.6,
-    reviews: 178,
-    avatar: "https://randomuser.me/api/portraits/men/47.jpg",
-  },
-  {
-    id: "chef-5",
-    name: "Chef John D",
-    rating: 4.6,
-    reviews: 178,
-    avatar: "https://randomuser.me/api/portraits/men/48.jpg",
-  },
-  {
-    id: "chef-6",
-    name: "Chef John D",
-    rating: 4.6,
-    reviews: 178,
-    avatar: "https://randomuser.me/api/portraits/men/49.jpg",
-  },
-  {
-    id: "chef-7",
-    name: "Chef John D",
-    rating: 4.6,
-    reviews: 178,
-    avatar: "https://randomuser.me/api/portraits/men/50.jpg",
-  },
-  {
-    id: "chef-8",
-    name: "Chef John D",
-    rating: 4.6,
-    reviews: 178,
-    avatar: "https://randomuser.me/api/portraits/men/41.jpg",
-  },
-
-];
+const favoriteDishes = dishes.filter(d => d.isFavorite);
 
 type Dish = {
   id: string;
@@ -255,7 +177,7 @@ const styles = StyleSheet.create({
   },
   image: {
     width: "100%",
-    height: 150,
+    height: 140,
     borderRadius: 12,
     marginBottom: 8,
   },
