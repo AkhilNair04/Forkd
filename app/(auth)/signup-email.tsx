@@ -27,7 +27,7 @@ export default function SignUpEmailScreen() {
           <Text style={styles.label}>NAME</Text>
           <TextInput
             style={styles.input}
-            placeholder="John doe"
+            placeholder="Enter your full name"
             placeholderTextColor="#a3a3a3"
           />
 
@@ -35,7 +35,7 @@ export default function SignUpEmailScreen() {
           <Text style={styles.label}>EMAIL</Text>
           <TextInput
             style={styles.input}
-            placeholder="example@gmail.com"
+            placeholder="Enter your email"
             placeholderTextColor="#a3a3a3"
           />
 
@@ -44,7 +44,7 @@ export default function SignUpEmailScreen() {
           <View style={styles.passwordWrapper}>
             <TextInput
               style={styles.input}
-              placeholder="********"
+              placeholder="Enter your password"
               placeholderTextColor="#a3a3a3"
               secureTextEntry={!showPassword}
             />
@@ -61,7 +61,7 @@ export default function SignUpEmailScreen() {
           <View style={styles.passwordWrapper}>
             <TextInput
               style={styles.input}
-              placeholder="********"
+              placeholder="Confirm your password"
               placeholderTextColor="#a3a3a3"
               secureTextEntry={!showRetypePassword}
             />
