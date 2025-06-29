@@ -1,50 +1,71 @@
-# Welcome to your Expo app 👋
+# fork'd: Home Chef & Meal Booking App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+fork'd is a modern mobile app built with [Expo](https://expo.dev) and React Native, designed to connect customers with home chefs for personalized meal experiences. The app features onboarding, profile management, dietary preferences, support, and more, all with a beautiful dark-themed UI.
 
-## Get started
+## ✨ Features
 
-1. Install dependencies
+- **User Onboarding:** Email/phone login, role selection (Customer/Chef), and language selection.
+- **Profile Management:** Edit personal info, profile photo, and bio.
+- **Dietary Preferences:** Select dietary restrictions, allergies, and add custom notes.
+- **Support Center:** Access helpdesk, ticket support, and FAQs.
+- **Bottom Tab Navigation:** Quick access to home, chefs, dishes, calendar, and settings.
+- **Dark Theme:** Consistent, modern dark UI throughout the app.
+- **File-based Routing:** Powered by Expo Router for scalable navigation.
 
+## 📁 Project Structure
+
+```
+fork'd/
+  app/                  # Main app screens and navigation
+    (auth)/             # Authentication and onboarding screens
+    (tabs)/             # Main tab screens (home, profile, etc)
+    customer-settings/  # Profile, preferences, support, settings
+    App.js              # App entry point
+    _layout.tsx         # Expo Router layout
+  components/           # Reusable UI components
+  constants/            # Static data (colors, chef/dish data)
+  assets/               # Images and fonts
+  hooks/                # Custom React hooks
+  scripts/              # Utility scripts
+  package.json          # Project dependencies
+  README.md             # Project documentation
+```
+
+## 🚀 Getting Started
+
+1. **Install dependencies:**
    ```bash
    npm install
    ```
-
-2. Start the app
-
+2. **Start the app:**
    ```bash
    npx expo start
    ```
+   - Open in Expo Go, iOS Simulator, or Android Emulator.
 
-In the output, you'll find options to open the app in a
+## 🛠️ Development
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- Edit screens in the `app/` directory. Routing is file-based via Expo Router.
+- UI components are in `components/` and use consistent dark theme styles.
+- Update static data in `constants/` as needed.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## 🧩 Tech Stack
 
-## Get a fresh project
+- **React Native** (with Expo)
+- **Expo Router** (file-based navigation)
+- **TypeScript**
+- **Dark Theme** (custom styles)
+- **Vector Icons** (Feather, FontAwesome, etc)
 
-When you're ready, run:
+## 📄 Main Screens
 
-```bash
-npm run reset-project
-```
+- **Onboarding & Auth:** `/app/(auth)/`
+- **Tabs (Home, Chefs, Dishes, Profile, etc):** `/app/(tabs)/`
+- **Profile Edit:** `/app/customer-settings/customer-profile.tsx`
+- **Preferences:** `/app/customer-settings/eating-preferences.tsx`
+- **Support:** `/app/customer-settings/support.tsx`
+- **Settings:** `/app/customer-settings/settings.tsx`
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Built by the fork'd team at UpSmart Solutions.
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+[Nitheesh, Nandana, Akhil, Shaun, Abhijith and Diya.]
