@@ -31,18 +31,6 @@ fork'd/
   README.md             # Project documentation
 ```
 
-## 🚀 Getting Started
-
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-2. **Start the app:**
-   ```bash
-   npx expo start
-   ```
-   - Open in Expo Go, iOS Simulator, or Android Emulator.
-
 ## 🛠️ Development
 
 - Edit screens in the `app/` directory. Routing is file-based via Expo Router.
