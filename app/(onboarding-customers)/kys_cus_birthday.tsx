@@ -27,7 +27,7 @@ export default function KycCusBirthday() {
 
   const handleConfirm = () => {
     // TODO: save birthday
-    router.push("/"); // adjust to your next route
+    router.push('/dietary-restrictions'); // adjust to your next route
   };
 
   const handleSkip = () => {
