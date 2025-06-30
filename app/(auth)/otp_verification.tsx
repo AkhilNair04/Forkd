@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from "react-native";
 import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function OtpVerification() {
   const [code, setCode] = useState(["", "", "", ""]);
@@ -33,9 +34,15 @@ export default function OtpVerification() {
     }
   };
 
-  const handleVerify = () => {
-    // TODO: actual OTP verify logic
-    router.replace("/(tabs)");
+  const handleVerify = async () => {
+    // TODO: insert your OTP verification logic here.
+    // On success, branch based on user type:
+    const isNew = (await AsyncStorage.getItem("isNewUser")) === "true";
+    if (isNew) {
+      router.replace("../(onboarding-customers)/kyc_cus_name");
+    } else {
+      router.replace("/(tabs)"); // go to your main home/tabs
+    }
   };
 
   const handleResend = () => {
@@ -60,8 +67,7 @@ export default function OtpVerification() {
               <TextInput
                 key={idx}
                 ref={(el) => {
-                  /* assign and return void */
-                  inputRefs.current[idx] = el;
+                  inputRefs.current[idx] = el; // assign void
                 }}
                 style={styles.codeBox}
                 keyboardType="number-pad"
