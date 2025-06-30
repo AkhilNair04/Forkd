@@ -40,7 +40,7 @@ export default function LoginScreen() {
 
     await AsyncStorage.setItem('phoneForOTP', fullPhone);
     await AsyncStorage.setItem('isNewUser', 'false');
-    router.replace('/otp-verification');
+    router.replace('/otp_verification');
   };
 
   const handleAltLogin = () => router.replace('/email-login');
