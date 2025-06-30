@@ -15,7 +15,7 @@ export default function NewReturningScreen() {
     // persist user type for this session
     await AsyncStorage.setItem('isNewUser', type === 'new' ? 'true' : 'false');
     // send them to OTP entry next
-    router.replace('/otp_verification');
+    router.replace('/signup');
   };
 
   return (
