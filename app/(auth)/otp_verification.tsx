@@ -1,3 +1,4 @@
+// app/otp-verification.tsx
 import React, { useRef, useState, useEffect } from "react";
 import {
   View,
@@ -7,16 +8,19 @@ import {
   StyleSheet,
   SafeAreaView,
   ScrollView,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "@/constants/supabase";
 
 export default function OtpVerification() {
-  const [code, setCode] = useState(["", "", "", ""]);
+  // six-digit code state
+  const [code, setCode] = useState(Array(6).fill(""));
   const [secondsLeft, setSecondsLeft] = useState(60);
   const inputRefs = useRef<Array<TextInput | null>>([]);
 
-  // Countdown timer
+  // countdown timer
   useEffect(() => {
     if (secondsLeft === 0) return;
     const timer = setInterval(() => setSecondsLeft((s) => s - 1), 1000);
@@ -28,33 +32,61 @@ export default function OtpVerification() {
     const updated = [...code];
     updated[idx] = text;
     setCode(updated);
-
-    if (text && idx < 3) {
+    // auto-focus next
+    if (text && idx < code.length - 1) {
       inputRefs.current[idx + 1]?.focus();
     }
   };
 
   const handleVerify = async () => {
-    // TODO: insert your OTP verification logic here.
-    // On success, branch based on user type:
+    const token = code.join("");
+    // retrieve phone saved during signup
+    const phone = (await AsyncStorage.getItem("phoneForOTP")) || "";
+    if (!phone) {
+      Alert.alert("Error", "No phone number found. Please retry sign-up.");
+      return;
+    }
+
+    // verify via Supabase
+    const { data, error } = await supabase.auth.verifyOtp({
+      phone,
+      token,
+      type: "sms",
+    });
+
+    if (error) {
+      Alert.alert("OTP Error", error.message);
+      return;
+    }
+
+    // signed in successfully
     const isNew = (await AsyncStorage.getItem("isNewUser")) === "true";
     if (isNew) {
       router.replace("../(onboarding-customers)/kyc_cus_name");
     } else {
-      router.replace("/(tabs)"); // go to your main home/tabs
+      router.replace("/(tabs)");
     }
   };
 
-  const handleResend = () => {
-    // TODO: trigger resend OTP API
+  const handleResend = async () => {
+    // reset timer & inputs
     setSecondsLeft(60);
+    setCode(Array(6).fill(""));
+    inputRefs.current[0]?.focus();
+
+    // re-trigger Supabase OTP send
+    const phone = (await AsyncStorage.getItem("phoneForOTP")) || "";
+    if (!phone) return Alert.alert("Error", "No phone to resend OTP to.");
+
+    await supabase.auth.signInWithOtp({ phone });
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>Verification</Text>
-      <Text style={styles.subheader}>We have sent a code to your email</Text>
-      <Text style={styles.email}>example@gmail.com</Text>
+      <Text style={styles.subheader}>
+        Enter the 6-digit code we sent you
+      </Text>
 
       <View style={styles.formWrapper}>
         <ScrollView
@@ -66,15 +98,16 @@ export default function OtpVerification() {
             {code.map((digit, idx) => (
               <TextInput
                 key={idx}
-                ref={(el) => {
-                  inputRefs.current[idx] = el; // assign void
-                }}
+                ref={(el) => { inputRefs.current[idx] = el }}
                 style={styles.codeBox}
                 keyboardType="number-pad"
                 maxLength={1}
                 value={digit}
                 onChangeText={(txt) => handleChange(txt, idx)}
-                returnKeyType={idx < 3 ? "next" : "done"}
+                returnKeyType={idx < code.length - 1 ? "next" : "done"}
+                onSubmitEditing={() => {
+                  if (idx === code.length - 1) handleVerify();
+                }}
               />
             ))}
           </View>
@@ -87,12 +120,18 @@ export default function OtpVerification() {
             ) : (
               <>
                 <Text style={styles.resendTextInactive}>Resend</Text>
-                <Text style={styles.resendCountdown}> in {secondsLeft}s</Text>
+                <Text style={styles.resendCountdown}>
+                  {" "}
+                  in {secondsLeft}s
+                </Text>
               </>
             )}
           </View>
 
-          <TouchableOpacity style={styles.verifyBtn} onPress={handleVerify}>
+          <TouchableOpacity
+            style={styles.verifyBtn}
+            onPress={handleVerify}
+          >
             <Text style={styles.verifyText}>VERIFY</Text>
           </TouchableOpacity>
         </ScrollView>
@@ -120,20 +159,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 8,
   },
-  email: {
-    fontSize: 18,
-    color: "#fff",
-    fontWeight: "600",
-    textAlign: "center",
-    marginVertical: 8,
-  },
   formWrapper: {
     flex: 1,
     backgroundColor: "#3F3F3F",
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    overflow: "hidden",
     marginTop: 20,
+    overflow: "hidden",
   },
   scrollInner: {
     padding: 24,
@@ -145,12 +177,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   codeBox: {
-    width: 70,
-    height: 70,
+    width: 50,
+    height: 50,
     backgroundColor: "#ECEFF4",
-    borderRadius: 12,
+    borderRadius: 8,
     textAlign: "center",
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "600",
     color: "#000",
   },
