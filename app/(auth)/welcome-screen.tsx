@@ -13,7 +13,7 @@ const WelcomeScreen: React.FC = () => {
   const router = useRouter();
 
   const handleGetStarted = () => {
-    router.push("../customer-settings/settings");
+    router.push("/select-lang");
   };
 
   return (
