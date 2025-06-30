@@ -16,7 +16,7 @@ export default function KycCusName() {
 
   const handleConfirm = () => {
     // TODO: save name (AsyncStorage / context)
-    router.push('/'); // adjust to next KYC route
+    router.push('/kyc_cus_birthday'); // adjust to next KYC route
   };
 
   return (
