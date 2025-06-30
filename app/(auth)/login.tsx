@@ -1,5 +1,14 @@
+// app/login.tsx
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/constants/supabase';
@@ -11,7 +20,7 @@ export default function LoginScreen() {
 
   const handleSendOTP = async () => {
     if (!/^[6-9]\d{9}$/.test(phone)) {
-      Alert.alert('Invalid Number','Enter a valid 10-digit Indian number');
+      Alert.alert('Invalid Number', 'Enter a valid 10-digit Indian number');
       return;
     }
     setLoading(true);
@@ -27,9 +36,14 @@ export default function LoginScreen() {
     router.replace('/otp_verification');
   };
 
+  const handleAltLogin = () => {
+    router.replace('/email-login');
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Log-in Using Your Phone Number:</Text>
+
       <View style={styles.row}>
         <Text style={styles.code}>IN +91</Text>
         <TextInput
@@ -43,8 +57,21 @@ export default function LoginScreen() {
         />
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleSendOTP} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff"/> : <Text style={styles.btnText}>Send OTP</Text>}
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleSendOTP}
+        disabled={loading}
+      >
+        {loading
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={styles.btnText}>Send OTP</Text>
+        }
+      </TouchableOpacity>
+
+      {/* <-- Re-added alternate login */}
+      <Text style={styles.orText}>Or log in another way</Text>
+      <TouchableOpacity style={styles.altButton} onPress={handleAltLogin}>
+        <Text style={styles.altBtnText}>Email & Password</Text>
       </TouchableOpacity>
     </View>
   );
@@ -53,9 +80,29 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000', padding: 24, justifyContent: 'center' },
   title: { color: '#fff', fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 30 },
-  row: { flexDirection:'row', alignItems:'center', borderBottomWidth:1, borderColor:'#fff', marginBottom:30 },
-  code: { color:'#fff', fontWeight:'bold', marginRight:10, fontSize:16 },
-  input:{ flex:1, color:'#fff', fontSize:16, paddingVertical:8 },
-  button:{ backgroundColor:'#C67C4E', padding:16, borderRadius:20, alignItems:'center' },
-  btnText:{ color:'#fff', fontWeight:'600', fontSize:16 },
+  row: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: '#fff', marginBottom: 30 },
+  code: { color: '#fff', fontWeight: 'bold', marginRight: 10, fontSize: 16 },
+  input: { flex: 1, color: '#fff', fontSize: 16, paddingVertical: 8 },
+
+  button: { backgroundColor: '#C67C4E', padding: 16, borderRadius: 20, alignItems: 'center' },
+  buttonDisabled: { opacity: 0.7 },
+  btnText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+
+  orText: { 
+    color: '#fff',
+    textAlign: 'center',
+    marginVertical: 16,
+    fontSize: 14,
+  },
+  altButton: {
+    backgroundColor: '#333',
+    paddingVertical: 14,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  altBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
 });
