@@ -1,13 +1,23 @@
-import Constants from 'expo-constants'
-import { createClient } from '@supabase/supabase-js'
+// constants/supabase.ts
+import Constants from 'expo-constants';
+import { createClient } from '@supabase/supabase-js';
 
-
-const {
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY,
-} = Constants.manifest!.extra as {
-  SUPABASE_URL: string
-  SUPABASE_ANON_KEY: string
+interface AppConfig {
+  extra: {
+    SUPABASE_URL: string;
+    SUPABASE_ANON_KEY: string;
+  };
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+// Double-cast: first to unknown, then to our type
+const appConfig = Constants.expoConfig as unknown as AppConfig;
+const { SUPABASE_URL, SUPABASE_ANON_KEY } = appConfig.extra;
+
+// Runtime guard
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    'Missing SUPABASE_URL or SUPABASE_ANON_KEY in app.config.js extra'
+  );
+}
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
