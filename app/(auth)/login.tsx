@@ -8,11 +8,10 @@ export default function LoginScreen() {
 
   const handleSendOTP = () => {
     // TODO: Trigger OTP send logic here
-    router.replace('/'); // change this route based on your flow
+    router.replace('/otp-verification');
   };
 
   const handleAltLogin = () => {
-    // Navigate to alternate login (e.g., email or social)
     router.replace('/email-login'); // adjust as needed
   };
 
