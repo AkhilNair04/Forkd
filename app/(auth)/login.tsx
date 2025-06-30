@@ -1,111 +1,61 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '@/constants/supabase';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [countryCode, setCountryCode] = useState<CountryCode>('IN');
-  const [callingCode, setCallingCode] = useState<string>('91');
   const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSendOTP = () => {
-    // TODO: Trigger OTP send logic here
+  const handleSendOTP = async () => {
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      Alert.alert('Invalid Number','Enter a valid 10-digit Indian number');
+      return;
+    }
+    setLoading(true);
+    const fullPhone = `+91${phone}`;
+    const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
+    setLoading(false);
+    if (error) {
+      Alert.alert('OTP Error', error.message);
+      return;
+    }
+    await AsyncStorage.setItem('phoneForOTP', fullPhone);
+    await AsyncStorage.setItem('isNewUser', 'false');
     router.replace('/otp_verification');
-  };
-
-  const handleAltLogin = () => {
-    router.replace('/email-login'); // adjust as needed
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Log-in Using Your Phone Number:</Text>
-
-      <View style={styles.phoneInputContainer}>
-        {/* Tapping the flag+code opens the picker by default */}
-        <CountryPicker
-          countryCode={countryCode}
-          withFlag
-          withCallingCodeButton
-          withFilter
-          onSelect={(c: Country) => {
-            setCountryCode(c.cca2);
-            setCallingCode(c.callingCode[0]);
-          }}
-        />
-        <Text style={styles.callingCode}>+{callingCode}</Text>
+      <View style={styles.row}>
+        <Text style={styles.code}>IN +91</Text>
         <TextInput
           style={styles.input}
-          placeholder="Enter phone number"
+          placeholder="Phone number"
           placeholderTextColor="#aaa"
           keyboardType="phone-pad"
           value={phone}
           onChangeText={setPhone}
+          maxLength={10}
         />
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleSendOTP}>
-        <Text style={styles.buttonText}>Send OTP</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.orText}>Or</Text>
-
-      <TouchableOpacity style={styles.button} onPress={handleAltLogin}>
-        <Text style={styles.buttonText}>LOG IN ANOTHER WAY</Text>
+      <TouchableOpacity style={styles.button} onPress={handleSendOTP} disabled={loading}>
+        {loading ? <ActivityIndicator color="#fff"/> : <Text style={styles.btnText}>Send OTP</Text>}
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-  },
-  title: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 30,
-    textAlign: 'center',
-  },
-  phoneInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderColor: '#fff',
-    marginBottom: 30,
-    paddingBottom: Platform.OS === 'android' ? 4 : 6,
-  },
-  callingCode: {
-    color: '#fff',
-    fontWeight: 'bold',
-    marginHorizontal: 8,
-    fontSize: 16,
-  },
-  input: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: '#C67C4E',
-    paddingVertical: 16,
-    borderRadius: 20,
-    marginVertical: 10,
-    alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  orText: {
-    color: '#fff',
-    textAlign: 'center',
-    marginVertical: 10,
-    fontSize: 16,
-  },
+  container: { flex: 1, backgroundColor: '#000', padding: 24, justifyContent: 'center' },
+  title: { color: '#fff', fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 30 },
+  row: { flexDirection:'row', alignItems:'center', borderBottomWidth:1, borderColor:'#fff', marginBottom:30 },
+  code: { color:'#fff', fontWeight:'bold', marginRight:10, fontSize:16 },
+  input:{ flex:1, color:'#fff', fontSize:16, paddingVertical:8 },
+  button:{ backgroundColor:'#C67C4E', padding:16, borderRadius:20, alignItems:'center' },
+  btnText:{ color:'#fff', fontWeight:'600', fontSize:16 },
 });

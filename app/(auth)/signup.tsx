@@ -1,3 +1,4 @@
+// app/signup-phone.tsx
 import React, { useState } from 'react';
 import {
   View,
@@ -10,17 +11,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import CountryPicker, {
-  Country,
-  CountryCode,
-} from 'react-native-country-picker-modal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/constants/supabase';
 
 export default function SignupPhone() {
   const router = useRouter();
-  const [countryCode, setCountryCode] = useState<CountryCode>('IN');
-  const [callingCode, setCallingCode] = useState<string>('91');
   const [phone, setPhone] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -35,7 +30,7 @@ export default function SignupPhone() {
     }
 
     setLoading(true);
-    const fullPhone = `+${callingCode}${phone}`;
+    const fullPhone = `+91${phone}`; // hard-coded country code
 
     // Trigger Supabase OTP send
     const { error } = await supabase.auth.signInWithOtp({
@@ -49,11 +44,8 @@ export default function SignupPhone() {
       // Persist phone for OTP screen
       await AsyncStorage.setItem('phoneForOTP', fullPhone);
 
-      // (Optional) if you have "new vs returning" flag set earlier:
-      // await AsyncStorage.setItem('isNewUser', 'true'); // or 'false'
-
       // Navigate to OTP screen
-      router.replace('/otp-verification');
+      router.replace('/otp_verification');
     }
   };
 
@@ -62,17 +54,7 @@ export default function SignupPhone() {
       <Text style={styles.title}>Sign-up Using Your Phone Number:</Text>
 
       <View style={styles.phoneRow}>
-        <CountryPicker
-          countryCode={countryCode}
-          withFlag
-          withCallingCodeButton
-          withFilter
-          onSelect={(c: Country) => {
-            setCountryCode(c.cca2);
-            setCallingCode(c.callingCode[0]);
-          }}
-        />
-        <Text style={styles.callingCode}>+{callingCode}</Text>
+        <Text style={styles.callingCode}>IN +91</Text>
         <TextInput
           placeholder="Phone number"
           placeholderTextColor="#aaa"
@@ -134,7 +116,8 @@ const styles = StyleSheet.create({
   callingCode: {
     color: '#fff',
     fontSize: 18,
-    marginHorizontal: 8,
+    fontWeight: '600',
+    marginRight: 12,
   },
   input: {
     flex: 1,
