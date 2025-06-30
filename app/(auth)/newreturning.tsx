@@ -14,8 +14,13 @@ export default function NewReturningScreen() {
   const handlePress = async (type: 'new' | 'returning') => {
     // persist user type for this session
     await AsyncStorage.setItem('isNewUser', type === 'new' ? 'true' : 'false');
-    // send them to OTP entry next
-    router.replace('/signup');
+
+    // route accordingly
+    if (type === 'new') {
+      router.replace('/signup');
+    } else {
+      router.replace('/login');
+    }
   };
 
   return (
@@ -38,7 +43,13 @@ export default function NewReturningScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
   button: {
     backgroundColor: '#C67C4E',
     paddingVertical: 16,
