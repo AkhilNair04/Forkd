@@ -32,11 +32,11 @@ export default function KycCusDietary() {
 
   const handleConfirm = () => {
     // TODO: save `selected` somewhere
-    router.push('/'); // adjust route
+    router.push('/cus_location'); // adjust route
   };
 
   const handleSkip = () => {
-    router.push('/');
+    router.push('/cus_location');
   };
 
   return (
