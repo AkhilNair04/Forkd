@@ -8,7 +8,7 @@ export default function LoginScreen() {
 
   const handleSendOTP = () => {
     // TODO: Trigger OTP send logic here
-    router.replace('/otp-verification');
+    router.replace('/otp_verification');
   };
 
   const handleAltLogin = () => {
