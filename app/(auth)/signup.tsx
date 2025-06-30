@@ -9,7 +9,7 @@ export default function SignupScreen() {
 
   const handleSendOTP = () => {
     // Add validation and navigation logic here
-    router.replace('/'); // Replace with actual OTP page
+    router.replace('/otp_verification'); // Replace with actual OTP page
   };
 
   return (
