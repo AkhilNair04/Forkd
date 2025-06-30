@@ -15,6 +15,7 @@ import CountryPicker, {
   Country,
   CountryCode,
 } from 'react-native-country-picker-modal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/constants/supabase';
 
 export default function SignupPhone() {
@@ -25,7 +26,7 @@ export default function SignupPhone() {
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleSendOTP = async () => {
-    // Basic validation: ensure numeric and 6–14 digits (adjust as needed)
+    // Basic validation: numeric, 6–14 digits
     if (!/^\d{6,14}$/.test(phone)) {
       Alert.alert(
         'Invalid Number',
@@ -37,6 +38,7 @@ export default function SignupPhone() {
     setLoading(true);
     const fullPhone = `+${callingCode}${phone}`;
 
+    // Trigger Supabase OTP send
     const { error } = await supabase.auth.signInWithOtp({
       phone: fullPhone,
     });
@@ -45,8 +47,14 @@ export default function SignupPhone() {
     if (error) {
       Alert.alert('OTP Error', error.message);
     } else {
-      // Pass the fullPhone along (optional) via storage or params
-      router.replace('/otp_verification');
+      // Persist phone for OTP screen
+      await AsyncStorage.setItem('phoneForOTP', fullPhone);
+
+      // (Optional) if you have "new vs returning" flag set earlier:
+      // await AsyncStorage.setItem('isNewUser', 'true'); // or 'false'
+
+      // Navigate to OTP screen
+      router.replace('/otp-verification');
     }
   };
 
