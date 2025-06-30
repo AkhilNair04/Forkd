@@ -1,18 +1,54 @@
+// app/login.tsx
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '@/constants/supabase';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSendOTP = () => {
-    // TODO: Trigger OTP send logic here
+  const handleSendOTP = async () => {
+    // validate 10-digit Indian number
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      Alert.alert('Invalid Number', 'Enter a valid 10-digit Indian phone number.');
+      return;
+    }
+
+    setLoading(true);
+    const fullPhone = `+91${phone}`;
+
+    // Supabase OTP
+    const { error } = await supabase.auth.signInWithOtp({
+      phone: fullPhone,
+    });
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('OTP Error', error.message);
+      return;
+    }
+
+    // persist for OTP screen
+    await AsyncStorage.setItem('phoneForOTP', fullPhone);
+    await AsyncStorage.setItem('isNewUser', 'false');
+
+    // navigate
     router.replace('/otp_verification');
   };
 
   const handleAltLogin = () => {
-    router.replace('/email-login'); // adjust as needed
+    router.replace('/email-login'); // adjust if needed
   };
 
   return (
@@ -28,11 +64,19 @@ export default function LoginScreen() {
           keyboardType="phone-pad"
           value={phone}
           onChangeText={setPhone}
+          maxLength={10}
         />
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleSendOTP}>
-        <Text style={styles.buttonText}>Send OTP</Text>
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleSendOTP}
+        disabled={loading}
+      >
+        {loading
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={styles.buttonText}>Send OTP</Text>
+        }
       </TouchableOpacity>
 
       <Text style={styles.orText}>Or</Text>
@@ -83,6 +127,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginVertical: 10,
     alignItems: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonText: {
     color: '#fff',
