@@ -53,7 +53,7 @@ export default function SignupPhone() {
       // await AsyncStorage.setItem('isNewUser', 'true'); // or 'false'
 
       // Navigate to OTP screen
-      router.replace('/otp_verification');
+      router.replace('/otp-verification');
     }
   };
 
