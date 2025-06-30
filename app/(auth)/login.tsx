@@ -8,30 +8,29 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import CountryPicker, { Country, CountryCode } from 'react-native-country-picker-modal';
 import { supabase } from '@/constants/supabase';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const [countryCode, setCountryCode] = useState<CountryCode>('IN');
+  const [callingCode, setCallingCode] = useState<string>('91');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSendOTP = async () => {
-    // validate 10-digit Indian number
-    if (!/^[6-9]\d{9}$/.test(phone)) {
-      Alert.alert('Invalid Number', 'Enter a valid 10-digit Indian phone number.');
+    if (!/^\d{6,14}$/.test(phone)) {
+      Alert.alert('Invalid Number', 'Please enter a valid phone number (6–14 digits).');
       return;
     }
 
     setLoading(true);
-    const fullPhone = `+91${phone}`;
-
-    // Supabase OTP
-    const { error } = await supabase.auth.signInWithOtp({
-      phone: fullPhone,
-    });
+    const fullPhone = `+${callingCode}${phone}`;
+    const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
     setLoading(false);
 
     if (error) {
@@ -39,24 +38,30 @@ export default function LoginScreen() {
       return;
     }
 
-    // persist for OTP screen
     await AsyncStorage.setItem('phoneForOTP', fullPhone);
     await AsyncStorage.setItem('isNewUser', 'false');
-
-    // navigate
-    router.replace('/otp_verification');
+    router.replace('/otp-verification');
   };
 
-  const handleAltLogin = () => {
-    router.replace('/email-login'); // adjust if needed
-  };
+  const handleAltLogin = () => router.replace('/email-login');
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Log-in Using Your Phone Number:</Text>
 
       <View style={styles.phoneInputContainer}>
-        <Text style={styles.countryCode}>IN ▾ +91</Text>
+        {/* Tapping the flag+code opens the picker by default */}
+        <CountryPicker
+          countryCode={countryCode}
+          withFlag
+          withCallingCodeButton
+          withFilter
+          onSelect={(c: Country) => {
+            setCountryCode(c.cca2);
+            setCallingCode(c.callingCode[0]);
+          }}
+        />
+        <Text style={styles.callingCode}>+{callingCode}</Text>
         <TextInput
           style={styles.input}
           placeholder="Enter phone number"
@@ -64,7 +69,7 @@ export default function LoginScreen() {
           keyboardType="phone-pad"
           value={phone}
           onChangeText={setPhone}
-          maxLength={10}
+          maxLength={14}
         />
       </View>
 
@@ -108,12 +113,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#fff',
     marginBottom: 30,
-    paddingBottom: 6,
+    paddingBottom: Platform.OS === 'android' ? 4 : 6,
   },
-  countryCode: {
+  callingCode: {
     color: '#fff',
     fontWeight: 'bold',
-    marginRight: 10,
+    marginHorizontal: 8,
     fontSize: 16,
   },
   input: {
