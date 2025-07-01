@@ -36,6 +36,7 @@
     "expo-system-ui": "~5.0.8",
     "expo-web-browser": "~14.1.6",
     "react": "19.0.0",
+    "react-async-hook": "^4.0.0",
     "react-dom": "19.0.0",
     "react-native": "^0.79.3",
     "react-native-country-picker-modal": "^2.0.0",
