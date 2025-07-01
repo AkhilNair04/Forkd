@@ -2,9 +2,9 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "jsx": "preserve",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
+    "jsx": "react-native",
+    "esModuleInterop": true,   // <--- add this line!
+    "lib": ["esnext"],
     "paths": {
       "@/*": [
         "./*"
