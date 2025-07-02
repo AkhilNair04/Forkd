@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// app/signup-email.tsx
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,14 +18,35 @@ import { router } from 'expo-router';
 import { supabase } from '@/constants/supabase';
 
 export default function SignUpEmailScreen() {
+  // form fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showRetypePassword, setShowRetypePassword] = useState(false);
   const [confirm, setConfirm] = useState('');
   const [isChef, setIsChef] = useState(false);
+
+  // UI toggles + loading
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRetypePassword, setShowRetypePassword] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // show email-confirm prompt
+  const [isConfirmingEmail, setIsConfirmingEmail] = useState(false);
+
+  // when email-confirm prompt shows, fire a single 5s timer then redirect
+  useEffect(() => {
+    if (!isConfirmingEmail) return;
+    const timer = setTimeout(async () => {
+      const role = await AsyncStorage.getItem('userRole');
+      if (role === 'chef') {
+        router.replace('/(onboarding-chefs)/kyc_chefs_profile');
+      } else {
+        router.replace('/(onboarding-customers)/kyc_cus_name');
+      }
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [isConfirmingEmail]);
 
   const handleSignUp = async () => {
     if (!name.trim() || !email.trim() || !password) {
@@ -36,29 +58,28 @@ export default function SignUpEmailScreen() {
 
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
-  email: email.trim(),
-  password,
-  options: {
-    data: {
-      full_name: name.trim(),
-      role: isChef ? 'chef' : 'customer',
-    },
-  },
-});
-
+      email: email.trim(),
+      password,
+      options: {
+        data: {
+          full_name: name.trim(),
+          role: isChef ? 'chef' : 'customer',
+        },
+      },
+    });
     setLoading(false);
 
     if (error) {
       return Alert.alert('Sign-up Error', error.message);
     }
 
-    // mark as new user for onboarding flow
+    // persist flow flags & role
     await AsyncStorage.setItem('isNewUser', 'true');
-    // you can persist email too if needed:
     await AsyncStorage.setItem('emailForSignup', email.trim());
+    await AsyncStorage.setItem('userRole', isChef ? 'chef' : 'customer');
 
-    // route to login (or email verification screen if you have one)
-    router.replace('/login-email');
+    // show the "check your email" message & trigger redirect
+    setIsConfirmingEmail(true);
   };
 
   return (
@@ -71,7 +92,7 @@ export default function SignUpEmailScreen() {
           contentContainerStyle={styles.scrollInner}
           showsVerticalScrollIndicator={false}
         >
-          {/* Name */}
+          {/* NAME */}
           <Text style={styles.label}>NAME</Text>
           <TextInput
             style={styles.input}
@@ -81,7 +102,7 @@ export default function SignUpEmailScreen() {
             onChangeText={setName}
           />
 
-          {/* Email */}
+          {/* EMAIL */}
           <Text style={styles.label}>EMAIL</Text>
           <TextInput
             style={styles.input}
@@ -93,7 +114,7 @@ export default function SignUpEmailScreen() {
             onChangeText={setEmail}
           />
 
-          {/* Password */}
+          {/* PASSWORD */}
           <Text style={styles.label}>PASSWORD</Text>
           <View style={styles.passwordWrapper}>
             <TextInput
@@ -107,7 +128,7 @@ export default function SignUpEmailScreen() {
             />
             <TouchableOpacity
               style={styles.eyeIcon}
-              onPress={() => setShowPassword(!showPassword)}
+              onPress={() => setShowPassword(v => !v)}
             >
               <Feather
                 name={showPassword ? 'eye-off' : 'eye'}
@@ -117,7 +138,7 @@ export default function SignUpEmailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Retype Password */}
+          {/* RETYPE PASSWORD */}
           <Text style={styles.label}>RE-TYPE PASSWORD</Text>
           <View style={styles.passwordWrapper}>
             <TextInput
@@ -131,7 +152,7 @@ export default function SignUpEmailScreen() {
             />
             <TouchableOpacity
               style={styles.eyeIcon}
-              onPress={() => setShowRetypePassword(!showRetypePassword)}
+              onPress={() => setShowRetypePassword(v => !v)}
             >
               <Feather
                 name={showRetypePassword ? 'eye-off' : 'eye'}
@@ -141,23 +162,20 @@ export default function SignUpEmailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Sign-up as Chef */}
+          {/* SIGN UP AS CHEF */}
           <Pressable
             style={styles.checkboxRow}
-            onPress={() => setIsChef((prev) => !prev)}
+            onPress={() => setIsChef(v => !v)}
           >
             <View
-              style={[
-                styles.checkbox,
-                isChef && styles.checkboxChecked,
-              ]}
+              style={[styles.checkbox, isChef && styles.checkboxChecked]}
             />
             <Text style={styles.checkboxText}>
               Sign up as a <Text style={styles.chefText}>chef</Text>
             </Text>
           </Pressable>
 
-          {/* Submit */}
+          {/* SUBMIT */}
           <TouchableOpacity
             style={styles.signUpButton}
             onPress={handleSignUp}
@@ -171,6 +189,15 @@ export default function SignUpEmailScreen() {
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      {/* EMAIL CONFIRMATION PROMPT */}
+      {isConfirmingEmail && (
+        <View style={styles.confirmationMessage}>
+          <Text style={styles.confirmationText}>
+            Check your email for confirmation!
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -264,5 +291,20 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 18,
+  },
+  confirmationMessage: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -100 }, { translateY: -20 }],
+    backgroundColor: '#000',
+    padding: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  confirmationText: {
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
   },
 });
