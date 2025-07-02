@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.forkd.app"
+      "bundleIdentifier": "com.forkd.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "FORK’D needs your location to show nearby chefs and dishes."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -25,6 +28,8 @@
       "edgeToEdgeEnabled": true,
       "package": "com.forkd.app",
       "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.SCHEDULE_EXACT_ALARM"
       ]

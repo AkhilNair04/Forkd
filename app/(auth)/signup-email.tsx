@@ -1,5 +1,5 @@
 // app/signup-email.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,23 +11,47 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  StyleSheet as RNStyleSheet,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/constants/supabase';
 
 export default function SignUpEmailScreen() {
+  const router = useRouter();
+
+  // form fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showRetypePassword, setShowRetypePassword] = useState(false);
   const [confirm, setConfirm] = useState('');
   const [isChef, setIsChef] = useState(false);
+
+  // UI toggles + loading
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRetypePassword, setShowRetypePassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // after signup, show email prompt then redirect
+  const [isConfirmingEmail, setIsConfirmingEmail] = useState(false);
+
+  useEffect(() => {
+    if (!isConfirmingEmail) return;
+    const timer = setTimeout(async () => {
+      // retrieve role and route accordingly
+      const role = await AsyncStorage.getItem('userRole');
+      if (role === 'chef') {
+        router.replace('/chef-onboarding');
+      } else {
+        router.replace('/(onboarding-customers)/kyc_cus_name');
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [isConfirmingEmail]);
+
   const handleSignUp = async () => {
+    // validations
     if (!name.trim() || !email.trim() || !password) {
       return Alert.alert('Missing Fields', 'Please fill out all fields.');
     }
@@ -36,30 +60,30 @@ export default function SignUpEmailScreen() {
     }
 
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-  email: email.trim(),
-  password,
-  options: {
-    data: {
-      full_name: name.trim(),
-      role: isChef ? 'chef' : 'customer',
-    },
-  },
-});
-
+    // supabase signup
+    const { error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        data: {
+          full_name: name.trim(),
+          role: isChef ? 'chef' : 'customer',
+        },
+      },
+    });
     setLoading(false);
 
     if (error) {
       return Alert.alert('Sign-up Error', error.message);
     }
 
-    // mark as new user for onboarding flow
+    // persist flow flags & role
     await AsyncStorage.setItem('isNewUser', 'true');
-    // you can persist email too if needed:
     await AsyncStorage.setItem('emailForSignup', email.trim());
+    await AsyncStorage.setItem('userRole', isChef ? 'chef' : 'customer');
 
-    // route to login (or email verification screen if you have one)
-    router.replace('/login-email');
+    // show confirmation overlay → will trigger redirect in useEffect
+    setIsConfirmingEmail(true);
   };
 
   return (
@@ -108,7 +132,7 @@ export default function SignUpEmailScreen() {
             />
             <TouchableOpacity
               style={styles.eyeIcon}
-              onPress={() => setShowPassword(!showPassword)}
+              onPress={() => setShowPassword((v) => !v)}
             >
               <Feather
                 name={showPassword ? 'eye-off' : 'eye'}
@@ -132,7 +156,7 @@ export default function SignUpEmailScreen() {
             />
             <TouchableOpacity
               style={styles.eyeIcon}
-              onPress={() => setShowRetypePassword(!showRetypePassword)}
+              onPress={() => setShowRetypePassword((v) => !v)}
             >
               <Feather
                 name={showRetypePassword ? 'eye-off' : 'eye'}
@@ -147,12 +171,7 @@ export default function SignUpEmailScreen() {
             style={styles.checkboxRow}
             onPress={() => setIsChef((prev) => !prev)}
           >
-            <View
-              style={[
-                styles.checkbox,
-                isChef && styles.checkboxChecked,
-              ]}
-            />
+            <View style={[styles.checkbox, isChef && styles.checkboxChecked]} />
             <Text style={styles.checkboxText}>
               Sign up as a <Text style={styles.chefText}>chef</Text>
             </Text>
@@ -172,11 +191,20 @@ export default function SignUpEmailScreen() {
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      {/* Email Confirmation Overlay */}
+      {isConfirmingEmail && (
+        <View style={styles.confirmationMessage}>
+          <Text style={styles.confirmationText}>
+            Check your email for confirmation!
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = RNStyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0D0D0D',
@@ -265,5 +293,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 18,
+  },
+
+  // Centered, dimmed overlay
+  confirmationMessage: {
+    ...RNStyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.75)',
+  },
+  confirmationText: {
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
   },
 });

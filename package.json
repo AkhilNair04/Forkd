@@ -29,7 +29,7 @@
     "expo-image": "~2.3.0",
     "expo-linear-gradient": "~14.1.5",
     "expo-linking": "~7.1.5",
-    "expo-location": "~18.1.5",
+    "expo-location": "~18.1.6",
     "expo-notifications": "^0.31.3",
     "expo-permissions": "^14.4.0",
     "expo-router": "~5.1.0",
@@ -49,7 +49,8 @@
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-web": "~0.20.0",
-    "react-native-webview": "13.13.5"
+    "react-native-webview": "13.13.5",
+    "expo-image-picker": "~16.1.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
