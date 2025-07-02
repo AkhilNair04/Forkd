@@ -1,13 +1,13 @@
 // dish.tsx
-import HeaderSection from "@/components/HeaderSection";
-import SearchBarWithFilter from "@/components/SearchBarWithFilter";
-import ItemCard from "@/components/ItemCard";
 import FilterModal from "@/components/FilterModal";
+import HeaderSection from "@/components/HeaderSection";
+import ItemCard from "@/components/ItemCard";
+import SearchBarWithFilter from "@/components/SearchBarWithFilter";
+import { dishes } from "@/constants/dishData";
 import { Stack, router } from "expo-router";
 import { useEffect, useState } from "react";
-import { FlatList, StatusBar, Text, View, StyleSheet } from "react-native";
+import { FlatList, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { dishes } from "@/constants/dishData";
 
 const addresses = ["1234 Culinary Street, Flavor Town, Near Food Plaza, Opp. Tasty Tower, Apt 56, Delight City, Gourmet State"];
 
@@ -54,6 +54,7 @@ export default function DishScreen() {
         <View style={styles.container}>
           <HeaderSection address={selectedAddress} />
           <SearchBarWithFilter searchQuery={searchQuery} setSearchQuery={setSearchQuery} onOpenFilter={() => setShowFilterModal(true)} />
+          
           <Text style={styles.sectionTitle}>All Dishes</Text>
           <FlatList
             data={filteredDishes}

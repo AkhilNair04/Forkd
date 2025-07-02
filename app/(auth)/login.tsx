@@ -45,7 +45,7 @@ export default function LoginScreen() {
       <Text style={styles.title}>Log-in Using Your Phone Number:</Text>
 
       <View style={styles.row}>
-        <Text style={styles.code}>IN ▾ +91</Text>
+        <Text style={styles.code}>IN +91</Text>
         <TextInput
           style={styles.input}
           placeholder="Phone number"
@@ -68,8 +68,8 @@ export default function LoginScreen() {
         }
       </TouchableOpacity>
 
+      {/* <-- Re-added alternate login */}
       <Text style={styles.orText}>Or log in another way</Text>
-
       <TouchableOpacity style={styles.altButton} onPress={handleAltLogin}>
         <Text style={styles.altBtnText}>Email & Password</Text>
       </TouchableOpacity>
@@ -78,55 +78,17 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-  },
-  title: {
-    color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderColor: '#fff',
-    marginBottom: 30,
-  },
-  code: {
-    color: '#fff',
-    fontWeight: 'bold',
-    marginRight: 10,
-    fontSize: 16,
-  },
-  input: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 16,
-    paddingVertical: 8,
-  },
+  container: { flex: 1, backgroundColor: '#000', padding: 24, justifyContent: 'center' },
+  title: { color: '#fff', fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 30 },
+  row: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: '#fff', marginBottom: 30 },
+  code: { color: '#fff', fontWeight: 'bold', marginRight: 10, fontSize: 16 },
+  input: { flex: 1, color: '#fff', fontSize: 16, paddingVertical: 8 },
 
-  button: {
-    backgroundColor: '#C67C4E',
-    paddingVertical: 16,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  btnText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-  },
+  button: { backgroundColor: '#C67C4E', padding: 16, borderRadius: 20, alignItems: 'center' },
+  buttonDisabled: { opacity: 0.7 },
+  btnText: { color: '#fff', fontWeight: '600', fontSize: 16 },
 
-  orText: {
+  orText: { 
     color: '#fff',
     textAlign: 'center',
     marginVertical: 16,
@@ -134,13 +96,13 @@ const styles = StyleSheet.create({
   },
   altButton: {
     backgroundColor: '#333',
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderRadius: 20,
     alignItems: 'center',
   },
   altBtnText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
 });

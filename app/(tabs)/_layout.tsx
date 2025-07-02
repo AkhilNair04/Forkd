@@ -1,9 +1,8 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { Colors } from 'react-native/Libraries/NewAppScreen';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -45,35 +44,35 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="home" size={28} color={color} />,
         }}
       />
       <Tabs.Screen
         name="chef"
         options={{
-          title: 'chef',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chef.hat" color={color} />,
+          title: 'Chef',
+          tabBarIcon: ({ color }) => <MaterialCommunityIcons name="chef-hat" size={28} color={color} />,
         }}
       />
       <Tabs.Screen
         name="dish"
         options={{
-          title: 'dish',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="dish.fill" color={color} />,
+          title: 'Dish',
+          tabBarIcon: ({ color }) => <Ionicons name="restaurant" size={28} color={color} />,
         }}
       />
       <Tabs.Screen
         name="reel"
         options={{
-          title: 'reel',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="reel.fill" color={color} />,
+          title: 'Reel',
+          tabBarIcon: ({ color }) => <Feather name="video" size={28} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'profile',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <Ionicons name="person" size={28} color={color} />,
         }}
       />
     </Tabs>

@@ -1,5 +1,5 @@
 // app/signup-email.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -18,35 +18,14 @@ import { router } from 'expo-router';
 import { supabase } from '@/constants/supabase';
 
 export default function SignUpEmailScreen() {
-  // form fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [isChef, setIsChef] = useState(false);
-
-  // UI toggles + loading
   const [showPassword, setShowPassword] = useState(false);
   const [showRetypePassword, setShowRetypePassword] = useState(false);
+  const [confirm, setConfirm] = useState('');
+  const [isChef, setIsChef] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // show email-confirm prompt
-  const [isConfirmingEmail, setIsConfirmingEmail] = useState(false);
-
-  // when email-confirm prompt shows, fire a single 5s timer then redirect
-  useEffect(() => {
-    if (!isConfirmingEmail) return;
-    const timer = setTimeout(async () => {
-      const role = await AsyncStorage.getItem('userRole');
-      if (role === 'chef') {
-        router.replace('/(onboarding-chefs)/kyc_chefs_profile');
-      } else {
-        router.replace('/(onboarding-customers)/kyc_cus_name');
-      }
-    }, 5000);
-
-    return () => clearTimeout(timer);
-  }, [isConfirmingEmail]);
 
   const handleSignUp = async () => {
     if (!name.trim() || !email.trim() || !password) {
@@ -58,28 +37,29 @@ export default function SignUpEmailScreen() {
 
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        data: {
-          full_name: name.trim(),
-          role: isChef ? 'chef' : 'customer',
-        },
-      },
-    });
+  email: email.trim(),
+  password,
+  options: {
+    data: {
+      full_name: name.trim(),
+      role: isChef ? 'chef' : 'customer',
+    },
+  },
+});
+
     setLoading(false);
 
     if (error) {
       return Alert.alert('Sign-up Error', error.message);
     }
 
-    // persist flow flags & role
+    // mark as new user for onboarding flow
     await AsyncStorage.setItem('isNewUser', 'true');
+    // you can persist email too if needed:
     await AsyncStorage.setItem('emailForSignup', email.trim());
-    await AsyncStorage.setItem('userRole', isChef ? 'chef' : 'customer');
 
-    // show the "check your email" message & trigger redirect
-    setIsConfirmingEmail(true);
+    // route to login (or email verification screen if you have one)
+    router.replace('/login-email');
   };
 
   return (
@@ -92,7 +72,7 @@ export default function SignUpEmailScreen() {
           contentContainerStyle={styles.scrollInner}
           showsVerticalScrollIndicator={false}
         >
-          {/* NAME */}
+          {/* Name */}
           <Text style={styles.label}>NAME</Text>
           <TextInput
             style={styles.input}
@@ -102,7 +82,7 @@ export default function SignUpEmailScreen() {
             onChangeText={setName}
           />
 
-          {/* EMAIL */}
+          {/* Email */}
           <Text style={styles.label}>EMAIL</Text>
           <TextInput
             style={styles.input}
@@ -114,7 +94,7 @@ export default function SignUpEmailScreen() {
             onChangeText={setEmail}
           />
 
-          {/* PASSWORD */}
+          {/* Password */}
           <Text style={styles.label}>PASSWORD</Text>
           <View style={styles.passwordWrapper}>
             <TextInput
@@ -128,7 +108,7 @@ export default function SignUpEmailScreen() {
             />
             <TouchableOpacity
               style={styles.eyeIcon}
-              onPress={() => setShowPassword(v => !v)}
+              onPress={() => setShowPassword(!showPassword)}
             >
               <Feather
                 name={showPassword ? 'eye-off' : 'eye'}
@@ -138,7 +118,7 @@ export default function SignUpEmailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* RETYPE PASSWORD */}
+          {/* Retype Password */}
           <Text style={styles.label}>RE-TYPE PASSWORD</Text>
           <View style={styles.passwordWrapper}>
             <TextInput
@@ -152,7 +132,7 @@ export default function SignUpEmailScreen() {
             />
             <TouchableOpacity
               style={styles.eyeIcon}
-              onPress={() => setShowRetypePassword(v => !v)}
+              onPress={() => setShowRetypePassword(!showRetypePassword)}
             >
               <Feather
                 name={showRetypePassword ? 'eye-off' : 'eye'}
@@ -162,20 +142,23 @@ export default function SignUpEmailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* SIGN UP AS CHEF */}
+          {/* Sign-up as Chef */}
           <Pressable
             style={styles.checkboxRow}
-            onPress={() => setIsChef(v => !v)}
+            onPress={() => setIsChef((prev) => !prev)}
           >
             <View
-              style={[styles.checkbox, isChef && styles.checkboxChecked]}
+              style={[
+                styles.checkbox,
+                isChef && styles.checkboxChecked,
+              ]}
             />
             <Text style={styles.checkboxText}>
               Sign up as a <Text style={styles.chefText}>chef</Text>
             </Text>
           </Pressable>
 
-          {/* SUBMIT */}
+          {/* Submit */}
           <TouchableOpacity
             style={styles.signUpButton}
             onPress={handleSignUp}
@@ -189,15 +172,6 @@ export default function SignUpEmailScreen() {
           </TouchableOpacity>
         </ScrollView>
       </View>
-
-      {/* EMAIL CONFIRMATION PROMPT */}
-      {isConfirmingEmail && (
-        <View style={styles.confirmationMessage}>
-          <Text style={styles.confirmationText}>
-            Check your email for confirmation!
-          </Text>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
@@ -291,20 +265,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 18,
-  },
-  confirmationMessage: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: [{ translateX: -100 }, { translateY: -20 }],
-    backgroundColor: '#000',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  confirmationText: {
-    color: '#fff',
-    fontSize: 16,
-    textAlign: 'center',
   },
 });
