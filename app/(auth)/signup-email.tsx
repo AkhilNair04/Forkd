@@ -8,7 +8,6 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
-  Pressable,
   Alert,
   ActivityIndicator,
   StyleSheet as RNStyleSheet,
@@ -26,7 +25,6 @@ export default function SignUpEmailScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [isChef, setIsChef] = useState(false);
 
   // UI toggles + loading
   const [showPassword, setShowPassword] = useState(false);
@@ -39,10 +37,11 @@ export default function SignUpEmailScreen() {
   useEffect(() => {
     if (!isConfirmingEmail) return;
     const timer = setTimeout(async () => {
-      // retrieve role and route accordingly
+      // read the persisted role
       const role = await AsyncStorage.getItem('userRole');
+      // route to correct onboarding flow
       if (role === 'chef') {
-        router.replace('/(onboarding-chef)/chef_kyc');
+        router.replace('/(onboarding-chefs)/chef_kyc');
       } else {
         router.replace('/(onboarding-customers)/kyc_cus_name');
       }
@@ -67,7 +66,7 @@ export default function SignUpEmailScreen() {
       options: {
         data: {
           full_name: name.trim(),
-          role: isChef ? 'chef' : 'customer',
+          // role is already in AsyncStorage from select-user
         },
       },
     });
@@ -77,12 +76,11 @@ export default function SignUpEmailScreen() {
       return Alert.alert('Sign-up Error', error.message);
     }
 
-    // persist flow flags & role
+    // persist flags & route (role already saved)
     await AsyncStorage.setItem('isNewUser', 'true');
     await AsyncStorage.setItem('emailForSignup', email.trim());
-    await AsyncStorage.setItem('userRole', isChef ? 'chef' : 'customer');
 
-    // show confirmation overlay → will trigger redirect in useEffect
+    // trigger email-confirm overlay & redirect
     setIsConfirmingEmail(true);
   };
 
@@ -132,7 +130,7 @@ export default function SignUpEmailScreen() {
             />
             <TouchableOpacity
               style={styles.eyeIcon}
-              onPress={() => setShowPassword((v) => !v)}
+              onPress={() => setShowPassword(v => !v)}
             >
               <Feather
                 name={showPassword ? 'eye-off' : 'eye'}
@@ -156,7 +154,7 @@ export default function SignUpEmailScreen() {
             />
             <TouchableOpacity
               style={styles.eyeIcon}
-              onPress={() => setShowRetypePassword((v) => !v)}
+              onPress={() => setShowRetypePassword(v => !v)}
             >
               <Feather
                 name={showRetypePassword ? 'eye-off' : 'eye'}
@@ -165,17 +163,6 @@ export default function SignUpEmailScreen() {
               />
             </TouchableOpacity>
           </View>
-
-          {/* Sign-up as Chef */}
-          <Pressable
-            style={styles.checkboxRow}
-            onPress={() => setIsChef((prev) => !prev)}
-          >
-            <View style={[styles.checkbox, isChef && styles.checkboxChecked]} />
-            <Text style={styles.checkboxText}>
-              Sign up as a <Text style={styles.chefText}>chef</Text>
-            </Text>
-          </Pressable>
 
           {/* Submit */}
           <TouchableOpacity
@@ -257,31 +244,6 @@ const styles = RNStyleSheet.create({
     right: 12,
     top: 18,
   },
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#ccc',
-    marginRight: 10,
-  },
-  checkboxChecked: {
-    backgroundColor: '#C67C4E',
-    borderColor: '#C67C4E',
-  },
-  checkboxText: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  chefText: {
-    color: '#FF9900',
-    fontWeight: '600',
-  },
   signUpButton: {
     backgroundColor: '#C67C4E',
     paddingVertical: 16,
@@ -294,8 +256,6 @@ const styles = RNStyleSheet.create({
     fontWeight: 'bold',
     fontSize: 18,
   },
-
-  // Centered, dimmed overlay
   confirmationMessage: {
     ...RNStyleSheet.absoluteFillObject,
     justifyContent: 'center',
