@@ -1,9 +1,11 @@
 // components/HeaderSection.tsx
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import { Ionicons } from "@expo/vector-icons";
-import { Text, TouchableOpacity, View, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function HeaderSection({ address }: { address: string }) {
+  const router = useRouter();
   return (
     <View style={styles.topBar}>
       <View>
@@ -21,7 +23,10 @@ export default function HeaderSection({ address }: { address: string }) {
         </View>
       </View>
       <View style={styles.icons}>
-        <TouchableOpacity style={styles.badgeWrapper}>
+        <TouchableOpacity 
+          style={styles.badgeWrapper}
+          onPress={() => router.push('/chat')}
+        >
           <Ionicons name="chatbubble-ellipses-outline" size={24} color="white" />
           <View style={styles.badge}>
             <Text style={styles.badgeText}>2</Text>

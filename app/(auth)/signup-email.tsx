@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// app/signup-email.tsx
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,13 +9,82 @@ import {
   ScrollView,
   SafeAreaView,
   Pressable,
+  Alert,
+  ActivityIndicator,
+  StyleSheet as RNStyleSheet,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import { supabase } from '@/constants/supabase';
 
 export default function SignUpEmailScreen() {
+  const router = useRouter();
+
+  // form fields
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [isChef, setIsChef] = useState(false);
+
+  // UI toggles + loading
   const [showPassword, setShowPassword] = useState(false);
   const [showRetypePassword, setShowRetypePassword] = useState(false);
-  const [isChef, setIsChef] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // after signup, show email prompt then redirect
+  const [isConfirmingEmail, setIsConfirmingEmail] = useState(false);
+
+  useEffect(() => {
+    if (!isConfirmingEmail) return;
+    const timer = setTimeout(async () => {
+      // retrieve role and route accordingly
+      const role = await AsyncStorage.getItem('userRole');
+      if (role === 'chef') {
+        router.replace('/chef-onboarding');
+      } else {
+        router.replace('/(onboarding-customers)/kyc_cus_name');
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [isConfirmingEmail]);
+
+  const handleSignUp = async () => {
+    // validations
+    if (!name.trim() || !email.trim() || !password) {
+      return Alert.alert('Missing Fields', 'Please fill out all fields.');
+    }
+    if (password !== confirm) {
+      return Alert.alert('Password Mismatch', 'Passwords do not match.');
+    }
+
+    setLoading(true);
+    // supabase signup
+    const { error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        data: {
+          full_name: name.trim(),
+          role: isChef ? 'chef' : 'customer',
+        },
+      },
+    });
+    setLoading(false);
+
+    if (error) {
+      return Alert.alert('Sign-up Error', error.message);
+    }
+
+    // persist flow flags & role
+    await AsyncStorage.setItem('isNewUser', 'true');
+    await AsyncStorage.setItem('emailForSignup', email.trim());
+    await AsyncStorage.setItem('userRole', isChef ? 'chef' : 'customer');
+
+    // show confirmation overlay → will trigger redirect in useEffect
+    setIsConfirmingEmail(true);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -22,13 +92,18 @@ export default function SignUpEmailScreen() {
       <Text style={styles.subheader}>Please sign up to get started</Text>
 
       <View style={styles.formWrapper}>
-        <ScrollView contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollInner}
+          showsVerticalScrollIndicator={false}
+        >
           {/* Name */}
           <Text style={styles.label}>NAME</Text>
           <TextInput
             style={styles.input}
             placeholder="Enter your full name"
             placeholderTextColor="#a3a3a3"
+            value={name}
+            onChangeText={setName}
           />
 
           {/* Email */}
@@ -37,6 +112,10 @@ export default function SignUpEmailScreen() {
             style={styles.input}
             placeholder="Enter your email"
             placeholderTextColor="#a3a3a3"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
           />
 
           {/* Password */}
@@ -47,12 +126,19 @@ export default function SignUpEmailScreen() {
               placeholder="Enter your password"
               placeholderTextColor="#a3a3a3"
               secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              value={password}
+              onChangeText={setPassword}
             />
             <TouchableOpacity
               style={styles.eyeIcon}
-              onPress={() => setShowPassword(!showPassword)}
+              onPress={() => setShowPassword((v) => !v)}
             >
-              <Feather name={showPassword ? 'eye-off' : 'eye'} size={20} color="#888" />
+              <Feather
+                name={showPassword ? 'eye-off' : 'eye'}
+                size={20}
+                color="#888"
+              />
             </TouchableOpacity>
           </View>
 
@@ -64,34 +150,61 @@ export default function SignUpEmailScreen() {
               placeholder="Confirm your password"
               placeholderTextColor="#a3a3a3"
               secureTextEntry={!showRetypePassword}
+              autoCapitalize="none"
+              value={confirm}
+              onChangeText={setConfirm}
             />
             <TouchableOpacity
               style={styles.eyeIcon}
-              onPress={() => setShowRetypePassword(!showRetypePassword)}
+              onPress={() => setShowRetypePassword((v) => !v)}
             >
-              <Feather name={showRetypePassword ? 'eye-off' : 'eye'} size={20} color="#888" />
+              <Feather
+                name={showRetypePassword ? 'eye-off' : 'eye'}
+                size={20}
+                color="#888"
+              />
             </TouchableOpacity>
           </View>
 
-          {/* Checkbox */}
-          <Pressable style={styles.checkboxRow} onPress={() => setIsChef(!isChef)}>
+          {/* Sign-up as Chef */}
+          <Pressable
+            style={styles.checkboxRow}
+            onPress={() => setIsChef((prev) => !prev)}
+          >
             <View style={[styles.checkbox, isChef && styles.checkboxChecked]} />
             <Text style={styles.checkboxText}>
               Sign up as a <Text style={styles.chefText}>chef</Text>
             </Text>
           </Pressable>
 
-          {/* Submit Button */}
-          <TouchableOpacity style={styles.signUpButton}>
-            <Text style={styles.signUpButtonText}>SIGN UP</Text>
+          {/* Submit */}
+          <TouchableOpacity
+            style={styles.signUpButton}
+            onPress={handleSignUp}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.signUpButtonText}>SIGN UP</Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </View>
+
+      {/* Email Confirmation Overlay */}
+      {isConfirmingEmail && (
+        <View style={styles.confirmationMessage}>
+          <Text style={styles.confirmationText}>
+            Check your email for confirmation!
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = RNStyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0D0D0D',
@@ -133,7 +246,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     borderRadius: 12,
     padding: 14,
-    paddingRight: 45,
     fontSize: 16,
     color: '#000',
   },
@@ -181,5 +293,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 18,
+  },
+
+  // Centered, dimmed overlay
+  confirmationMessage: {
+    ...RNStyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.75)',
+  },
+  confirmationText: {
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
   },
 });

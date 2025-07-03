@@ -1,8 +1,8 @@
 import {
-  Feather,
-  FontAwesome5,
-  MaterialCommunityIcons,
-  MaterialIcons,
+    Feather,
+    FontAwesome5,
+    MaterialCommunityIcons,
+    MaterialIcons,
 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -29,6 +29,10 @@ const Settings: React.FC = () => {
         <SettingsItem
           title="Eating Preferences"
           onPress={() => router.push("/customer-settings/eating-preferences")}
+        />
+        <SettingsItem 
+          title="User Settings"
+          onPress={() => router.push("/customer-settings/user-settings")}
         />
         <SettingsItem title="Language and Region" />
         <SettingsItem title="Privacy & Security" />
