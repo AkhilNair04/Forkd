@@ -1,20 +1,16 @@
 // chef.tsx (same structure, with changes to data and filters)
-import HeaderSection from "@/components/HeaderSection";
-import SearchBarWithFilter from "@/components/SearchBarWithFilter";
-import ItemCard from "@/components/ItemCard";
 import FilterModal from "@/components/FilterModal";
+import HeaderSection from "@/components/HeaderSection";
+import ItemCard from "@/components/ItemCard";
+import SearchBarWithFilter from "@/components/SearchBarWithFilter";
+import { chefs } from "@/constants/chefData";
 import { Stack, router } from "expo-router";
 import { useEffect, useState } from "react";
-import { FlatList, StatusBar, Text, View, StyleSheet } from "react-native";
+import { FlatList, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+
 const addresses = ["1234 Culinary Street, Flavor Town, Near Food Plaza, Opp. Tasty Tower, Apt 56, Delight City, Gourmet State"];
-const chefs = [
-  { id: "1", name: "Chef Anand R", cuisine: "American Cuisine", rating: 4.8, image: "https://randomuser.me/api/portraits/women/68.jpg" },
-  { id: "2", name: "Chef Albin S", cuisine: "Italian Cuisine", rating: 4.5, image: "https://randomuser.me/api/portraits/men/58.jpg" },
-  { id: "3", name: "Chef Priya K", cuisine: "Indian Cuisine", rating: 4.3, image: "https://randomuser.me/api/portraits/women/68.jpg" },
-  { id: "4", name: "Chef Ravi M", cuisine: "Korean Cuisine", rating: 4.2, image: "https://randomuser.me/api/portraits/men/68.jpg" },
-];
 
 export default function ChefScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -55,6 +51,7 @@ export default function ChefScreen() {
         <View style={styles.container}>
           <HeaderSection address={selectedAddress} />
           <SearchBarWithFilter searchQuery={searchQuery} setSearchQuery={setSearchQuery} onOpenFilter={() => setShowFilterModal(true)} />
+          
           <Text style={styles.sectionTitle}>All Chefs</Text>
           <FlatList
             data={filteredChefs}

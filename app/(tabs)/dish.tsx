@@ -1,23 +1,19 @@
 // dish.tsx
-import HeaderSection from "@/components/HeaderSection";
-import SearchBarWithFilter from "@/components/SearchBarWithFilter";
-import ItemCard from "@/components/ItemCard";
 import FilterModal from "@/components/FilterModal";
+import HeaderSection from "@/components/HeaderSection";
+import ItemCard from "@/components/ItemCard";
+import SearchBarWithFilter from "@/components/SearchBarWithFilter";
+import { dishes } from "@/constants/dishData";
 import { Stack, router } from "expo-router";
 import { useEffect, useState } from "react";
-import { FlatList, StatusBar, Text, View, StyleSheet } from "react-native";
+import { FlatList, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const addresses = ["1234 Culinary Street, Flavor Town, Near Food Plaza, Opp. Tasty Tower, Apt 56, Delight City, Gourmet State"];
 
 
 
-const dishes = [
-  { id: "1", name: "Crab Rangoon", cuisine: "American Cuisine", rating: 4.8, image: "https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg" },
-  { id: "2", name: "Rigatoni Pasta", cuisine: "Italian Cuisine", rating: 4.5, image: "https://images.pexels.com/photos/842571/pexels-photo-842571.jpeg" },
-  { id: "3", name: "Chicken Biriyani", cuisine: "Indian Cuisine", rating: 4.3, image: "https://images.pexels.com/photos/699953/pexels-photo-699953.jpeg" },
-  { id: "4", name: "Tteokbokki", cuisine: "Korean Cuisine", rating: 4.2, image: "https://images.pexels.com/photos/1199957/pexels-photo-1199957.jpeg" },
-];
+
 
 export default function DishScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -58,6 +54,7 @@ export default function DishScreen() {
         <View style={styles.container}>
           <HeaderSection address={selectedAddress} />
           <SearchBarWithFilter searchQuery={searchQuery} setSearchQuery={setSearchQuery} onOpenFilter={() => setShowFilterModal(true)} />
+          
           <Text style={styles.sectionTitle}>All Dishes</Text>
           <FlatList
             data={filteredDishes}

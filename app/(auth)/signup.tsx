@@ -1,24 +1,60 @@
+// app/signup-phone.tsx
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { FontAwesome, MaterialIcons, AntDesign, Entypo } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '@/constants/supabase';
 
-export default function SignupScreen() {
+export default function SignupPhone() {
   const router = useRouter();
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const handleSendOTP = () => {
-    // Add validation and navigation logic here
-    router.replace('/'); // Replace with actual OTP page
+  const handleSendOTP = async () => {
+    // Basic validation: numeric, 6–14 digits
+    if (!/^\d{6,14}$/.test(phone)) {
+      Alert.alert(
+        'Invalid Number',
+        'Please enter a valid phone number (6–14 digits).'
+      );
+      return;
+    }
+
+    setLoading(true);
+    const fullPhone = `+91${phone}`; // hard-coded country code
+
+    // Trigger Supabase OTP send
+    const { error } = await supabase.auth.signInWithOtp({
+      phone: fullPhone,
+    });
+    setLoading(false);
+
+    if (error) {
+      Alert.alert('OTP Error', error.message);
+    } else {
+      // Persist phone for OTP screen
+      await AsyncStorage.setItem('phoneForOTP', fullPhone);
+
+      // Navigate to OTP screen
+      router.replace('/otp_verification');
+    }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Sign-up Using Your Phone Number:</Text>
 
-      {/* Phone input row */}
       <View style={styles.phoneRow}>
-        <Text style={styles.countryCode}>IN ▾ +91</Text>
+        <Text style={styles.callingCode}>IN +91</Text>
         <TextInput
           placeholder="Phone number"
           placeholderTextColor="#aaa"
@@ -26,24 +62,28 @@ export default function SignupScreen() {
           keyboardType="phone-pad"
           value={phone}
           onChangeText={setPhone}
+          maxLength={14}
         />
       </View>
 
-      {/* Send OTP button */}
-      <TouchableOpacity style={styles.sendButton} onPress={handleSendOTP}>
-        <Text style={styles.sendButtonText}>Send OTP</Text>
+      <TouchableOpacity
+        style={[styles.sendButton, loading && styles.sendButtonDisabled]}
+        onPress={handleSendOTP}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text style={styles.sendButtonText}>Send OTP</Text>
+        )}
       </TouchableOpacity>
 
-      {/* Divider */}
       <Text style={styles.orText}>Or</Text>
 
-      {/* Social icons row */}
-      <View style={styles.iconRow}>
-        <FontAwesome name="phone" size={28} color="white" style={styles.icon} />
-        <AntDesign name="google" size={28} color="white" style={styles.icon} />
-        <AntDesign name="twitter" size={28} color="white" style={styles.icon} />
-        <FontAwesome name="facebook" size={28} color="white" style={styles.icon} />
-        <AntDesign name="apple1" size={28} color="white" style={styles.icon} />
+      <View style={styles.socialRow}>
+        <TouchableOpacity onPress={() => router.replace('/signup-email')}>
+          <Text style={styles.altText}>SIGN UP WITH EMAIL</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -73,9 +113,10 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingBottom: Platform.OS === 'android' ? 4 : 6,
   },
-  countryCode: {
+  callingCode: {
     color: '#fff',
     fontSize: 18,
+    fontWeight: '600',
     marginRight: 12,
   },
   input: {
@@ -90,24 +131,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 60,
     borderRadius: 20,
     marginBottom: 30,
+    alignItems: 'center',
+  },
+  sendButtonDisabled: {
+    opacity: 0.7,
   },
   sendButtonText: {
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
-    textAlign: 'center',
   },
   orText: {
     color: '#fff',
     fontSize: 16,
     marginBottom: 20,
   },
-  iconRow: {
+  socialRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '80%',
+    justifyContent: 'center',
   },
-  icon: {
-    marginHorizontal: 10,
+  altText: {
+    color: '#FF7C2E',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

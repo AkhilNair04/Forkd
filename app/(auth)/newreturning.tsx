@@ -1,25 +1,41 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function NewReturningScreen() {
   const router = useRouter();
 
-  const handlePress = (type: 'new' | 'returning') => {
+  const handlePress = async (type: 'new' | 'returning') => {
+    // persist user type for this session
+    await AsyncStorage.setItem('isNewUser', type === 'new' ? 'true' : 'false');
+
+    // route accordingly
     if (type === 'new') {
-      router.replace('/signup'); // or wherever new users go next
+      router.replace('/signup');
     } else {
-      router.replace('/login'); // or your actual login screen route
+      router.replace('/login');
     }
   };
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.button} onPress={() => handlePress('new')}>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => handlePress('new')}
+      >
         <Text style={styles.buttonText}>I’m new here</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={() => handlePress('returning')}>
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => handlePress('returning')}
+      >
         <Text style={styles.buttonText}>I already have an account</Text>
       </TouchableOpacity>
     </View>
@@ -49,7 +65,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     textAlign: 'center',
-    includeFontPadding: false, // Android-specific tweak for vertical centering
-    textAlignVertical: 'center',
   },
 });

@@ -1,99 +1,108 @@
+// app/login.tsx
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '@/constants/supabase';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSendOTP = () => {
-    // TODO: Trigger OTP send logic here
-    router.replace('/'); // change this route based on your flow
+  const handleSendOTP = async () => {
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      Alert.alert('Invalid Number', 'Enter a valid 10-digit Indian number');
+      return;
+    }
+    setLoading(true);
+    const fullPhone = `+91${phone}`;
+    const { error } = await supabase.auth.signInWithOtp({ phone: fullPhone });
+    setLoading(false);
+    if (error) {
+      Alert.alert('OTP Error', error.message);
+      return;
+    }
+    await AsyncStorage.setItem('phoneForOTP', fullPhone);
+    await AsyncStorage.setItem('isNewUser', 'false');
+    router.replace('/otp_verification');
   };
 
   const handleAltLogin = () => {
-    // Navigate to alternate login (e.g., email or social)
-    router.replace('/email-login'); // adjust as needed
+    router.replace('/email-login');
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Log-in Using Your Phone Number:</Text>
 
-      <View style={styles.phoneInputContainer}>
-        <Text style={styles.countryCode}>IN ▾ +91</Text>
+      <View style={styles.row}>
+        <Text style={styles.code}>IN +91</Text>
         <TextInput
           style={styles.input}
-          placeholder="Enter phone number"
+          placeholder="Phone number"
           placeholderTextColor="#aaa"
           keyboardType="phone-pad"
           value={phone}
           onChangeText={setPhone}
+          maxLength={10}
         />
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleSendOTP}>
-        <Text style={styles.buttonText}>Send OTP</Text>
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleSendOTP}
+        disabled={loading}
+      >
+        {loading
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={styles.btnText}>Send OTP</Text>
+        }
       </TouchableOpacity>
 
-      <Text style={styles.orText}>Or</Text>
-
-      <TouchableOpacity style={styles.button} onPress={handleAltLogin}>
-        <Text style={styles.buttonText}>LOG IN ANOTHER WAY</Text>
+      {/* <-- Re-added alternate login */}
+      <Text style={styles.orText}>Or log in another way</Text>
+      <TouchableOpacity style={styles.altButton} onPress={handleAltLogin}>
+        <Text style={styles.altBtnText}>Email & Password</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-  },
-  title: {
+  container: { flex: 1, backgroundColor: '#000', padding: 24, justifyContent: 'center' },
+  title: { color: '#fff', fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 30 },
+  row: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: '#fff', marginBottom: 30 },
+  code: { color: '#fff', fontWeight: 'bold', marginRight: 10, fontSize: 16 },
+  input: { flex: 1, color: '#fff', fontSize: 16, paddingVertical: 8 },
+
+  button: { backgroundColor: '#C67C4E', padding: 16, borderRadius: 20, alignItems: 'center' },
+  buttonDisabled: { opacity: 0.7 },
+  btnText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+
+  orText: { 
     color: '#fff',
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 30,
     textAlign: 'center',
+    marginVertical: 16,
+    fontSize: 14,
   },
-  phoneInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderColor: '#fff',
-    marginBottom: 30,
-    paddingBottom: 6,
-  },
-  countryCode: {
-    color: '#fff',
-    fontWeight: 'bold',
-    marginRight: 10,
-    fontSize: 16,
-  },
-  input: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: '#C67C4E',
-    paddingVertical: 16,
+  altButton: {
+    backgroundColor: '#333',
+    paddingVertical: 14,
     borderRadius: 20,
-    marginVertical: 10,
     alignItems: 'center',
   },
-  buttonText: {
+  altBtnText: {
     color: '#fff',
-    fontWeight: '600',
     fontSize: 16,
-  },
-  orText: {
-    color: '#fff',
-    textAlign: 'center',
-    marginVertical: 10,
-    fontSize: 16,
+    fontWeight: '500',
   },
 });

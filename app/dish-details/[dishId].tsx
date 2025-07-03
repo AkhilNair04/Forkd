@@ -1,3 +1,4 @@
+import { dishes } from "@/constants/dishData";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
@@ -13,91 +14,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const mockDishes = {
-  "1": {
-    name: "Crab Rangoon",
-    description:
-      "Crab Rangoon is a popular appetizer consisting of crispy wontons filled with a savory mixture of cream cheese and crab meat.",
-    ingredients:
-      "Crab meat, cream cheese, garlic, green onions, soy sauce, Worcestershire sauce, wonton wrappers, oil",
-    image: "https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg",
-    tags: ["American", "Pescatarian", "Non-veg"],
-    chefs: [
-      {
-        name: "Chef Anna P",
-        rating: 4.8,
-        reviews: 230,
-        price: 499,
-        avatar: "https://randomuser.me/api/portraits/women/68.jpg",
-      },
-      {
-        name: "Chef Chris T",
-        rating: 4.5,
-        reviews: 320,
-        price: 399,
-        avatar: "https://randomuser.me/api/portraits/men/75.jpg",
-      },
-    ],
-  },
-  "2": {
-    name: "Crab Rangoon",
-    description:
-      "Crab Rangoon is a popular appetizer consisting of crispy wontons filled with a savory mixture of cream cheese and crab meat.",
-    ingredients:
-      "Crab meat, cream cheese, garlic, green onions, soy sauce, Worcestershire sauce, wonton wrappers, oil",
-    image: "https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg",
-    tags: ["American", "Pescatarian", "Non-veg"],
-    chefs: [
-      {
-        name: "Chef Anna P",
-        rating: 4.8,
-        reviews: 230,
-        price: 389,
-        avatar: "https://randomuser.me/api/portraits/women/68.jpg",
-      },
-      {
-        name: "Chef Chris T",
-        rating: 4.5,
-        reviews: 320,
-        price: 369,
-        avatar: "https://randomuser.me/api/portraits/men/75.jpg",
-      },
-    ],
-  },
-  "3": {
-    name: "Crab Rangoon",
-    description:
-      "Crab Rangoon is a popular appetizer consisting of crispy wontons filled with a savory mixture of cream cheese and crab meat.",
-    ingredients:
-      "Crab meat, cream cheese, garlic, green onions, soy sauce, Worcestershire sauce, wonton wrappers, oil",
-    image: "https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg",
-    tags: ["American", "Pescatarian", "Non-veg"],
-    chefs: [
-      {
-        name: "Chef Anna P",
-        rating: 4.8,
-        reviews: 230,
-        price: 377,
-        avatar: "https://randomuser.me/api/portraits/women/68.jpg",
-      },
-      {
-        name: "Chef Chris T",
-        rating: 4.5,
-        reviews: 320,
-        price: 299,
-        avatar: "https://randomuser.me/api/portraits/men/75.jpg",
-      },
-    ],
-  },
-};
-
 export default function DishDetailScreen() {
   const { dishId } = useLocalSearchParams();
-  const dishKey = Array.isArray(dishId) ? dishId[0] : dishId;
-  const dish = mockDishes[dishKey as keyof typeof mockDishes];
+  const dishIdString = Array.isArray(dishId) ? dishId[0] : dishId;
+  const dish = dishes.find((d) => d.id === dishIdString);
+
   const [quantity, setQuantity] = useState(1);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedSort, setSelectedSort] = useState("Sort By:");
+  const [selectedChef, setSelectedChef] = useState<string | null>(null);
 
   const sortOptions = [
     "Ratings (high to low)",
@@ -198,25 +123,42 @@ export default function DishDetailScreen() {
               data={dish.chefs}
               keyExtractor={(_, index) => index.toString()}
               scrollEnabled={false} // Important: prevents inner scroll clash with ScrollView
-              renderItem={({ item }) => (
-                <View style={styles.chefCard}>
-                  <Image source={{ uri: item.avatar }} style={styles.avatar} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.chefName}>{item.name}</Text>
+              renderItem={({ item }) => {
+                const isSelected = selectedChef === item.name;
+                return (
+                  <TouchableOpacity
+                    onPress={() => setSelectedChef(item.name)}
+                    style={[
+                      styles.chefCard,
+                      isSelected && styles.selectedChefCard, // apply style if selected
+                    ]}
+                  >
+                    <Image
+                      source={{ uri: item.avatar }}
+                      style={styles.avatar}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.chefName}>{item.name}</Text>
 
-                    <View style={styles.ratingPriceRow}>
-                      <View style={styles.chefRatingContainer}>
-                        <Ionicons name="star" size={16} color="#FDC913" />
-                        <Text style={styles.rating}>{item.rating}</Text>
-                        <Text style={styles.reviews}>({item.reviews})</Text>
+                      <View style={styles.ratingPriceRow}>
+                        <View style={styles.chefRatingContainer}>
+                          <Ionicons name="star" size={16} color="#FDC913" />
+                          <Text style={styles.rating}>{item.rating}</Text>
+                          <Text style={styles.reviews}>({item.reviews})</Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
 
-                  <Text style={styles.priceText}>₹{item.price * quantity}</Text>
-                </View>
-              )}
+                    <Text style={styles.priceText}>
+                      ₹{item.price * quantity}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }}
             />
+            <TouchableOpacity style={styles.orderButton}>
+              <Text style={styles.orderButtonText}>Place Order</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -398,16 +340,31 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   ratingPriceRow: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  marginTop: 4,
-},
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+  },
 
-priceText: {
-  fontSize: 16,
-  fontWeight: '600',
-  color: '#1a1a1a',
-  marginLeft: 10,
-},
+  priceText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1a1a1a",
+    marginLeft: 10,
+  },
+  orderButton: {
+    backgroundColor: "#C67C4E",
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  orderButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  selectedChefCard: {
+    backgroundColor: "#C67C4E",
+  },
 });
