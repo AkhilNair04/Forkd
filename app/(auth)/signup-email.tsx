@@ -42,7 +42,7 @@ export default function SignUpEmailScreen() {
       // retrieve role and route accordingly
       const role = await AsyncStorage.getItem('userRole');
       if (role === 'chef') {
-        router.replace('/chef-onboarding');
+        router.replace('/(onboarding-chef)/chef_kyc');
       } else {
         router.replace('/(onboarding-customers)/kyc_cus_name');
       }

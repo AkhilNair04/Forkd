@@ -26,7 +26,7 @@ export default function KycLocation() {
       }
       // you now have permission
       // TODO: store permission state if needed
-      router.push('/'); // adjust to your next route
+      router.push('/(tabs)'); // adjust to your next route
     } catch (e) {
       console.error(e);
       Alert.alert('Error', 'Could not request permission.');
