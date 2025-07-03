@@ -46,9 +46,9 @@ export default function CartScreen() {
       />
 
       <TouchableOpacity
-        onPress={() => router.push("/checkout")}
+        onPress={() => router.replace("/checkout")}  // points to app/checkout/index.tsx
         style={{
-          backgroundColor: "#f59e0b",
+          backgroundColor: cart.length ? "#f59e0b" : "#555",
           margin: 16,
           padding: 16,
           borderRadius: 14,
