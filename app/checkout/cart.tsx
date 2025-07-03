@@ -5,11 +5,11 @@ import { useCart } from "../../context/CartContext";
 import { router } from "expo-router";
 
 export default function CartScreen() {
-  const { cart, updateQuantity, removeFromCart } = useCart(); // ✅ correct hook usage
+  const { cart, updateQuantity, removeFromCart } = useCart();
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0); // ✅ uses quantity
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const Stepper = ({ id, qty }: any) => (
+  const Stepper = ({ id, qty }: { id: string; qty: number }) => (
     <View style={{ flexDirection: "row", alignItems: "center" }}>
       <TouchableOpacity onPress={() => updateQuantity(id, Math.max(1, qty - 1))}>
         <Text style={{ color: "#fff", fontSize: 18 }}>－</Text>
@@ -21,7 +21,7 @@ export default function CartScreen() {
     </View>
   );
 
-  const render = ({ item }: any) => (
+  const renderItem = ({ item }: any) => (
     <View style={{ flexDirection: "row", padding: 12 }}>
       <Image source={{ uri: item.image }} style={{ width: 60, height: 60, borderRadius: 12 }} />
       <View style={{ flex: 1, marginLeft: 10 }}>
@@ -42,7 +42,7 @@ export default function CartScreen() {
       <FlatList
         data={cart}
         keyExtractor={(i) => i.id}
-        renderItem={render}
+        renderItem={renderItem}
       />
 
       <TouchableOpacity
