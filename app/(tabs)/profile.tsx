@@ -1,8 +1,10 @@
+import { supabase } from "@/constants/supabase";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Modal,
@@ -10,6 +12,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -23,6 +26,7 @@ interface UserProfile {
   avatar: string;
   location: string;
   joinDate: string;
+  bio?: string;
 }
 
 interface UserStats {
@@ -34,7 +38,19 @@ interface UserStats {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Profile completion form data
+  const [profileForm, setProfileForm] = useState({
+    full_name: "",
+    location: "",
+    user_type: "customer",
+    bio: "",
+  });
+
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: "John Doe",
     email: "john.doe@example.com",
@@ -72,6 +88,9 @@ export default function ProfileScreen() {
     console.log("Logout button pressed"); // Debug log
 
     try {
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+
       // Clear all user-related data
       await AsyncStorage.multiRemove([
         "isLoggedIn",
@@ -91,6 +110,41 @@ export default function ProfileScreen() {
       console.error("Error during logout:", error);
       // Even if there's an error, still navigate away
       router.replace("/(auth)/welcome-screen");
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profileForm.full_name.trim()) {
+      Alert.alert("Missing Information", "Please enter your name");
+      return;
+    }
+
+    if (!profileForm.location) {
+      Alert.alert("Missing Information", "Please select your location");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Save to AsyncStorage for now
+      const updatedProfile = {
+        ...userProfile,
+        name: profileForm.full_name,
+        location: profileForm.location,
+        userType: profileForm.user_type as "customer" | "chef",
+        bio: profileForm.bio,
+      };
+
+      await AsyncStorage.setItem("userProfile", JSON.stringify(updatedProfile));
+      setUserProfile(updatedProfile);
+
+      setShowProfileModal(false);
+      Alert.alert("Success", "Your profile has been updated!");
+    } catch (error) {
+      console.error("Profile save error:", error);
+      Alert.alert("Error", "Something went wrong. Please try again.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -326,6 +380,79 @@ export default function ProfileScreen() {
                 <Text style={styles.modalLogoutText}>Logout</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Profile Completion Modal */}
+      <Modal
+        visible={showProfileModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowProfileModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Complete Your Profile</Text>
+            <Text style={styles.modalMessage}>
+              Please fill in the details below:
+            </Text>
+
+            {/* Profile Form */}
+            <View style={styles.profileForm}>
+              <TextInput
+                style={styles.input}
+                placeholder="Full Name"
+                placeholderTextColor="#666"
+                value={profileForm.full_name}
+                onChangeText={(text) =>
+                  setProfileForm({ ...profileForm, full_name: text })
+                }
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Location"
+                placeholderTextColor="#666"
+                value={profileForm.location}
+                onChangeText={(text) =>
+                  setProfileForm({ ...profileForm, location: text })
+                }
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Bio"
+                placeholderTextColor="#666"
+                value={profileForm.bio}
+                onChangeText={(text) =>
+                  setProfileForm({ ...profileForm, bio: text })
+                }
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            {/* Loading Indicator */}
+            {saving ? (
+              <ActivityIndicator
+                size="small"
+                color="#C67C4E"
+                style={styles.loadingIndicator}
+              />
+            ) : (
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveProfile}
+              >
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowProfileModal(false)}
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -596,5 +723,138 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  // Profile completion modal styles
+  profileForm: {
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  input: {
+    backgroundColor: "#2a2a2a",
+    color: "#fff",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16,
+    fontSize: 16,
+  },
+  loadingIndicator: {
+    marginVertical: 16,
+  },
+  saveButton: {
+    backgroundColor: "#C67C4E",
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  modalCloseButton: {
+    backgroundColor: "#2a2a2a",
+    padding: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  modalCloseText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  // Loading styles
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    color: "#fff",
+    fontSize: 16,
+    marginTop: 12,
+  },
+  // User bio style
+  userBio: {
+    fontSize: 13,
+    color: "#ccc",
+    marginTop: 4,
+    fontStyle: "italic",
+  },
+  // Profile modal styles
+  profileModalContainer: {
+    backgroundColor: "#1a1a1a",
+    borderRadius: 20,
+    margin: 20,
+    maxHeight: "80%",
+    padding: 0,
+    overflow: "hidden",
+  },
+  profileModalContent: {
+    maxHeight: 400,
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+    marginBottom: 8,
+  },
+  modalInput: {
+    backgroundColor: "#2a2a2a",
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: "#fff",
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  bioInput: {
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
+  userTypeContainer: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  userTypeButton: {
+    flex: 1,
+    backgroundColor: "#2a2a2a",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#333",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+  },
+  userTypeButtonSelected: {
+    borderColor: "#C67C4E",
+    backgroundColor: "#C67C4E20",
+  },
+  userTypeText: {
+    fontSize: 14,
+    color: "#666",
+    fontWeight: "600",
+  },
+  userTypeTextSelected: {
+    color: "#C67C4E",
+  },
+  modalSaveButton: {
+    backgroundColor: "#C67C4E",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    margin: 20,
+    marginTop: 0,
+  },
+  modalSaveText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

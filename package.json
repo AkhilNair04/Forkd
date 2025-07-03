@@ -48,6 +48,7 @@
     "react-native-country-picker-modal": "^2.0.0",
     "react-native-dropdown-picker": "^5.4.6",
     "react-native-gesture-handler": "~2.24.0",
+    "react-native-razorpay": "^2.3.0",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
@@ -60,6 +61,7 @@
     "@react-native-community/cli": "latest",
     "@types/node": "^24.0.7",
     "@types/react": "~19.0.10",
+    "@types/react-native-razorpay": "^2.2.6",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
     "typescript": "~5.8.3"
