@@ -1,3 +1,4 @@
+// app/(onboarding-customers)/kyc_cus_dietary.tsx
 import React, { useState } from 'react';
 import {
   SafeAreaView,
@@ -6,8 +7,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
-import { router } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { supabase } from '@/constants/supabase';
 
 const OPTIONS = [
   'Keto',
@@ -22,7 +26,9 @@ const OPTIONS = [
 ];
 
 export default function KycCusDietary() {
+  const router = useRouter();
   const [selected, setSelected] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const toggle = (opt: string) => {
     setSelected((curr) =>
@@ -30,13 +36,39 @@ export default function KycCusDietary() {
     );
   };
 
-  const handleConfirm = () => {
-    // TODO: save `selected` somewhere
-    router.push('/cus_location'); // adjust route
+  const handleConfirm = async () => {
+    setLoading(true);
+    // get current user
+    const {
+      data: { user },
+      error: userErr,
+    } = await supabase.auth.getUser();
+    if (userErr || !user) {
+      console.error(userErr);
+      Alert.alert('Error', 'Could not identify user.');
+      setLoading(false);
+      return;
+    }
+
+    // update dietary_restrictions
+    const { error: updateErr } = await supabase
+      .from('user_profiles')
+      .update({ dietary_restrictions: selected })
+      .eq('user_id', user.id);
+
+    setLoading(false);
+    if (updateErr) {
+      console.error(updateErr);
+      Alert.alert('Error', 'Failed to save selections.');
+      return;
+    }
+
+    // navigate next
+    router.replace('/cus_location');
   };
 
   const handleSkip = () => {
-    router.push('/cus_location');
+    router.replace('/cus_location');
   };
 
   return (
@@ -71,11 +103,15 @@ export default function KycCusDietary() {
 
         <View style={styles.actions}>
           <TouchableOpacity
-            style={[styles.btn, !selected.length && styles.btnDisabled]}
-            disabled={!selected.length}
+            style={[styles.btn, (!selected.length || loading) && styles.btnDisabled]}
+            disabled={!selected.length || loading}
             onPress={handleConfirm}
           >
-            <Text style={styles.btnText}>CONFIRM</Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.btnText}>CONFIRM</Text>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={handleSkip} style={styles.skipWrap}>

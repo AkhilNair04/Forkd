@@ -1,3 +1,4 @@
+// app/(onboarding-customers)/kyc_cus_birthday.tsx
 import React, { useState } from "react";
 import {
   SafeAreaView,
@@ -10,28 +11,61 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { router } from "expo-router";
+import { useRouter } from "expo-router";
+import { supabase } from "@/constants/supabase";
 
 export default function KycCusBirthday() {
+  const router = useRouter();
   const [date, setDate] = useState<Date | null>(null);
   const [showPicker, setShowPicker] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const onChange = (_: any, selectedDate?: Date) => {
+  const onChange = (_event: any, selectedDate?: Date) => {
     setShowPicker(Platform.OS === "ios");
     if (selectedDate) setDate(selectedDate);
   };
 
   const formatted = date
-    ? date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+    ? date.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
     : "";
 
-  const handleConfirm = () => {
-    // TODO: save birthday
-    router.push('/dietary_restrictions'); // adjust to your next route
+  const handleConfirm = async () => {
+    if (!date) return;
+    setLoading(true);
+
+    // get current user
+    const {
+      data: { user },
+      error: userErr,
+    } = await supabase.auth.getUser();
+    if (userErr || !user) {
+      console.error("Auth error:", userErr);
+      setLoading(false);
+      return;
+    }
+
+    // update user_profiles.dob
+    const { error: updateErr } = await supabase
+      .from("user_profiles")
+      .update({ dob: date.toISOString() })
+      .eq("user_id", user.id);
+
+    setLoading(false);
+    if (updateErr) {
+      console.error("Update dob error:", updateErr);
+      return;
+    }
+
+    // navigate onward
+    router.replace("/dietary_restrictions");
   };
 
   const handleSkip = () => {
-    router.push('/dietary_restrictions');
+    router.replace("/dietary_restrictions");
   };
 
   return (
@@ -43,20 +77,19 @@ export default function KycCusBirthday() {
         <View style={styles.content}>
           <Text style={styles.header}>When’s your birthday?</Text>
 
-          {/* Underline “input” */}
-          <TouchableOpacity onPress={() => setShowPicker(true)}>
-            <View pointerEvents="none">
-              <TextInput
-                style={styles.input}
-                placeholder="DD MMM YYYY"
-                placeholderTextColor="#555"
-                value={formatted}
-                editable={false}
-              />
-            </View>
+          <TouchableOpacity
+            onPress={() => setShowPicker(true)}
+            style={{ width: "100%" }}
+          >
+            <TextInput
+              style={styles.input}
+              placeholder="DD MMM YYYY"
+              placeholderTextColor="#555"
+              value={formatted}
+              editable={false}
+            />
           </TouchableOpacity>
 
-          {/* Date Picker */}
           {showPicker && (
             <DateTimePicker
               value={date || new Date()}
@@ -67,21 +100,23 @@ export default function KycCusBirthday() {
             />
           )}
 
-          {/* Confirm */}
           <TouchableOpacity
-            style={[styles.button, !date && styles.buttonDisabled]}
+            style={[
+              styles.button,
+              (!date || loading) && styles.buttonDisabled,
+            ]}
             onPress={handleConfirm}
-            disabled={!date}
+            disabled={!date || loading}
           >
-            <Text style={styles.buttonText}>CONFIRM</Text>
+            <Text style={styles.buttonText}>
+              {loading ? "Saving..." : "CONFIRM"}
+            </Text>
           </TouchableOpacity>
 
-          {/* Skip */}
           <TouchableOpacity onPress={handleSkip} style={styles.skip}>
             <Text style={styles.skipText}>Skip for now</Text>
           </TouchableOpacity>
 
-          {/* Footer note */}
           <Text style={styles.note}>Get a free dish on us!</Text>
         </View>
       </KeyboardAvoidingView>
@@ -91,31 +126,34 @@ export default function KycCusBirthday() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
-  inner: { flex: 1, justifyContent: "flex-end" },
+  inner: { flex: 1, justifyContent: "center" }, // center vertically
   content: {
     paddingHorizontal: 24,
-    paddingBottom: 60,
+    alignItems: "center",
   },
   header: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#fff",
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: 20,
   },
   input: {
+    width: "100%",
     borderBottomWidth: 1,
     borderColor: "#888",
     color: "#fff",
     fontSize: 18,
     paddingVertical: 12,
-    marginBottom: 40,
+    marginBottom: 30,
   },
   button: {
+    width: "100%",
     backgroundColor: "#C67C4E",
     borderRadius: 20,
     paddingVertical: 16,
     alignItems: "center",
+    marginBottom: 16,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -126,8 +164,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   skip: {
-    marginTop: 16,
-    alignItems: "center",
+    marginBottom: 30,
   },
   skipText: {
     color: "#FF9900",
@@ -136,7 +173,6 @@ const styles = StyleSheet.create({
   note: {
     textAlign: "center",
     color: "#888",
-    marginTop: 30,
     fontSize: 14,
   },
 });

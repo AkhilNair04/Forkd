@@ -1,5 +1,5 @@
 // app/otp-verification.tsx
-import React, { useRef, useState, useEffect } from "react"
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,81 +9,82 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
-} from "react-native"
-import { router } from "expo-router"
-import AsyncStorage from "@react-native-async-storage/async-storage"
-import { supabase } from "@/constants/supabase"
+} from "react-native";
+import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { supabase } from "@/constants/supabase";
 
 export default function OtpVerification() {
-  const [code, setCode] = useState<string[]>(Array(6).fill(""))
-  const [secondsLeft, setSecondsLeft] = useState(60)
-  const inputRefs = useRef<Array<TextInput | null>>([])
+  const [code, setCode] = useState<string[]>(Array(6).fill(""));
+  const [secondsLeft, setSecondsLeft] = useState(60);
+  const inputRefs = useRef<Array<TextInput | null>>([]);
 
   // Countdown timer
   useEffect(() => {
-    if (secondsLeft <= 0) return
-    const t = setInterval(() => setSecondsLeft(s => s - 1), 1000)
-    return () => clearInterval(t)
-  }, [secondsLeft])
+    if (secondsLeft <= 0) return;
+    const t = setInterval(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearInterval(t);
+  }, [secondsLeft]);
 
   const handleChange = (txt: string, idx: number) => {
-    if (!/^\d?$/.test(txt)) return
-    const arr = [...code]
-    arr[idx] = txt
-    setCode(arr)
+    if (!/^\d?$/.test(txt)) return;
+    const arr = [...code];
+    arr[idx] = txt;
+    setCode(arr);
     if (txt && idx < code.length - 1) {
-      inputRefs.current[idx + 1]?.focus()
+      inputRefs.current[idx + 1]?.focus();
     }
-  }
+  };
 
   const handleVerify = async () => {
-    const token = code.join("")
-    const phone = (await AsyncStorage.getItem("phoneForOTP")) || ""
+    const token = code.join("");
+    const phone = (await AsyncStorage.getItem("phoneForOTP")) || "";
     if (!phone) {
-      return Alert.alert("Error", "No phone found. Retry sign-up.")
+      return Alert.alert("Error", "No phone found. Retry sign-up.");
     }
 
     const { error } = await supabase.auth.verifyOtp({
       phone,
       token,
       type: "sms",
-    })
+    });
     if (error) {
-      return Alert.alert("OTP Error", error.message)
+      return Alert.alert("OTP Error", error.message);
     }
 
     // success!
-    const isNew = (await AsyncStorage.getItem("isNewUser")) === "true"
+    const isNew = (await AsyncStorage.getItem("isNewUser")) === "true";
     if (isNew) {
-      // read saved role
-      const role = (await AsyncStorage.getItem("userRole")) || "customer"
+      const role = (await AsyncStorage.getItem("userRole")) || "customer";
       if (role === "chef") {
-        router.replace("/(onboarding-chefs)/chef_kyc")
+        router.replace("/(onboarding-chefs)/chef_kyc");
       } else {
-        router.replace("/(onboarding-customers)/kyc_cus_name")
+        router.replace("/(onboarding-customers)/kyc_landing_accept");
       }
     } else {
-      // returning user → main tabs
-      router.replace("/(tabs)")
+      router.replace("/(tabs)");
     }
-  }
+  };
 
   const handleResend = async () => {
-    setSecondsLeft(60)
-    setCode(Array(6).fill(""))
-    inputRefs.current[0]?.focus()
+    setSecondsLeft(60);
+    setCode(Array(6).fill(""));
+    inputRefs.current[0]?.focus();
 
-    const phone = (await AsyncStorage.getItem("phoneForOTP")) || ""
+    const phone = (await AsyncStorage.getItem("phoneForOTP")) || "";
     if (!phone) {
-      return Alert.alert("Error", "No phone to resend OTP to.")
+      return Alert.alert("Error", "No phone to resend OTP to.");
     }
-    await supabase.auth.signInWithOtp({ phone })
-  }
+    await supabase.auth.signInWithOtp({ phone });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>Verification</Text>
-      <Text style={styles.subheader}>Enter the 6-digit code we sent you</Text>
+      <Text style={styles.subheader}>
+        Enter the 6-digit code we sent you{"\n"}
+        <Text style={styles.validityText}>(Valid for 60 seconds)</Text>
+      </Text>
 
       <View style={styles.formWrapper}>
         <ScrollView
@@ -95,15 +96,15 @@ export default function OtpVerification() {
             {code.map((digit, idx) => (
               <TextInput
                 key={idx}
-                ref={(el) => {inputRefs.current[idx] = el;}}
+                ref={(el) => { inputRefs.current[idx] = el; }}
                 style={styles.codeBox}
                 keyboardType="number-pad"
                 maxLength={1}
                 value={digit}
-                onChangeText={t => handleChange(t, idx)}
+                onChangeText={(t) => handleChange(t, idx)}
                 returnKeyType={idx < code.length - 1 ? "next" : "done"}
                 onSubmitEditing={() => {
-                  if (idx === code.length - 1) handleVerify()
+                  if (idx === code.length - 1) handleVerify();
                 }}
               />
             ))}
@@ -128,7 +129,7 @@ export default function OtpVerification() {
         </ScrollView>
       </View>
     </SafeAreaView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -149,6 +150,12 @@ const styles = StyleSheet.create({
     color: "#ccc",
     textAlign: "center",
     marginTop: 8,
+    marginBottom: 16,
+    lineHeight: 22,
+  },
+  validityText: {
+    color: "#f59e0b",
+    fontWeight: "600",
   },
   formWrapper: {
     flex: 1,
@@ -204,4 +211,4 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 18,
   },
-})
+});
