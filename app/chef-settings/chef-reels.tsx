@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { ResizeMode, Video } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import React, { useState } from "react";
 import {
@@ -12,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { supabase } from "../../constants/supabase";
 
 const CHEF_PROFILE = {
   avatar: "https://randomuser.me/api/portraits/men/65.jpg",
@@ -35,6 +37,7 @@ const POST_IMAGES = [
 export default function ChefReelsPage() {
   const [userImages, setUserImages] = useState<string[]>([]);
   const [showMediaModal, setShowMediaModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   // Place "add" at first slot
   const gridData = [
@@ -53,7 +56,49 @@ export default function ChefReelsPage() {
     }
   };
 
-  const pickImage = async (source: "camera" | "library") => {
+  const uploadVideoToSupabase = async (asset) => {
+    try {
+      setUploading(true);
+
+      const { uri, fileName, mimeType } = asset;
+
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      if (blob.size === 0) {
+        Alert.alert("Upload Failed", "Selected video file is empty.");
+        return null;
+      }
+
+      const name = fileName || `chef-reel-${Date.now()}`;
+      const type = mimeType || "video/mp4";
+
+      const { data, error } = await supabase.storage
+        .from("chef-reels")
+        .upload(name, blob, {
+          contentType: type,
+          cacheControl: "3600",
+        });
+
+      if (error) {
+        Alert.alert("Upload Failed", error.message);
+        return null;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("chef-reels")
+        .getPublicUrl(name);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      Alert.alert("Upload Failed", error.message);
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const pickVideo = async (source: "camera" | "library") => {
     const hasPermission = await requestPermissions(source);
 
     if (!hasPermission) {
@@ -65,9 +110,7 @@ export default function ChefReelsPage() {
     }
 
     const options = {
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1] as [number, number],
+      mediaTypes: "video",
       quality: 0.8,
     };
 
@@ -79,7 +122,19 @@ export default function ChefReelsPage() {
     }
 
     if (!result.canceled && result.assets[0]) {
-      setUserImages((prev) => [...prev, result.assets[0].uri]);
+      const asset = result.assets[0];
+
+      // Check if it's a video
+      if (asset.type === "video") {
+        // Upload video to Supabase
+        const uploadedUrl = await uploadVideoToSupabase(asset);
+        if (uploadedUrl) {
+          setUserImages((prev) => [...prev, uploadedUrl]);
+        }
+      } else {
+        // Handle images (if any)
+        setUserImages((prev) => [...prev, asset.uri]);
+      }
     }
 
     setShowMediaModal(false);
@@ -96,7 +151,17 @@ export default function ChefReelsPage() {
         </TouchableOpacity>
       );
     }
-    return <Image source={{ uri: item.uri }} style={styles.gridImg} />;
+    // Display Video for Reels
+    return (
+      <Video
+        source={{ uri: item.uri }}
+        style={styles.gridImg}
+        useNativeControls={false}
+        resizeMode={ResizeMode.COVER}
+        isLooping
+        shouldPlay={false} // Only play when user opens it (for grid)
+      />
+    );
   };
 
   return (
@@ -158,22 +223,17 @@ export default function ChefReelsPage() {
             onPress={() => setShowMediaModal(false)}
           >
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Add New Post</Text>
+              <Text style={styles.modalTitle}>Add New Reel</Text>
 
               <TouchableOpacity
                 style={styles.modalOption}
-                onPress={() => pickImage("camera")}
+                onPress={() => pickVideo("library")}
+                disabled={uploading}
               >
-                <Ionicons name="camera" size={24} color="#FF934F" />
-                <Text style={styles.modalOptionText}>Take Photo</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.modalOption}
-                onPress={() => pickImage("library")}
-              >
-                <Ionicons name="images" size={24} color="#FF934F" />
-                <Text style={styles.modalOptionText}>Choose from Gallery</Text>
+                <Ionicons name="videocam" size={24} color="#FF934F" />
+                <Text style={styles.modalOptionText}>
+                  {uploading ? "Uploading..." : "Choose Video from Gallery"}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
