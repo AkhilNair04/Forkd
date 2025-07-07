@@ -68,7 +68,7 @@ export default function ChefReelsPage() {
       if (blob.size === 0) {
         Alert.alert("Upload Failed", "Selected video file is empty.");
         return null;
-      }
+      } 
 
       const name = fileName || `chef-reel-${Date.now()}`;
       const type = mimeType || "video/mp4";

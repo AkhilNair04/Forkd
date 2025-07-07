@@ -21,6 +21,7 @@ export default function LoginEmailScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -29,7 +30,7 @@ export default function LoginEmailScreen() {
     }
 
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
     });
@@ -40,11 +41,26 @@ export default function LoginEmailScreen() {
       return;
     }
 
-    // Mark as returning user
     await AsyncStorage.setItem('isNewUser', 'false');
-
-    // Redirect to main tabs
     router.replace('/(tabs)');
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert('Email required', 'Please enter your email to reset password.');
+      return;
+    }
+    setResetLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+    setResetLoading(false);
+    if (error) {
+      Alert.alert('Reset Failed', error.message);
+    } else {
+      Alert.alert(
+        'Check Your Inbox',
+        'We’ve sent you an email with instructions to reset your password.'
+      );
+    }
   };
 
   return (
@@ -53,10 +69,7 @@ export default function LoginEmailScreen() {
       <Text style={styles.subheader}>Please log in to your existing account</Text>
 
       <View style={styles.formWrapper}>
-        <ScrollView
-          contentContainerStyle={styles.scrollInner}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
           <Text style={styles.label}>EMAIL</Text>
           <TextInput
             style={styles.input}
@@ -79,36 +92,25 @@ export default function LoginEmailScreen() {
               value={password}
               onChangeText={setPassword}
             />
-            <TouchableOpacity
-              style={styles.eyeIcon}
-              onPress={() => setShowPassword((v) => !v)}
-            >
-              <Feather
-                name={showPassword ? 'eye-off' : 'eye'}
-                size={20}
-                color="#888"
-              />
+            <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(v => !v)}>
+              <Feather name={showPassword ? 'eye-off' : 'eye'} size={20} color="#888" />
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.loginButtonText}>LOG IN</Text>
-            )}
+          {/* Forgot Password */}
+          <TouchableOpacity onPress={handleForgotPassword} disabled={resetLoading}>
+            <Text style={styles.forgotText}>
+              {resetLoading ? 'Sending reset…' : 'Forgot password?'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginButtonText}>LOG IN</Text>}
           </TouchableOpacity>
 
           <Text style={styles.signupText}>
             Don’t have an account?{' '}
-            <Text
-              style={styles.signupLink}
-              onPress={() => router.replace('/signup-email')}
-            >
+            <Text style={styles.signupLink} onPress={() => router.replace('/signup-email')}>
               SIGN UP WITH YOUR EMAIL
             </Text>
           </Text>
@@ -116,7 +118,6 @@ export default function LoginEmailScreen() {
           <Text style={styles.orText}>Or</Text>
 
           <View style={styles.socialRow}>
-            {/* If you want to implement social logins later */}
             <AntDesign name="google" size={28} color="white" />
             <AntDesign name="facebook-square" size={28} color="white" />
             <AntDesign name="apple1" size={28} color="white" />
@@ -179,9 +180,16 @@ const styles = StyleSheet.create({
     right: 16,
     top: 18,
   },
+  forgotText: {
+    color: '#FF7C2E',
+    marginTop: 8,
+    marginBottom: 20,
+    textAlign: 'right',
+    fontSize: 14,
+  },
   loginButton: {
     backgroundColor: '#C67C4E',
-    marginTop: 30,
+    marginTop: 10,
     paddingVertical: 16,
     borderRadius: 18,
     alignItems: 'center',
