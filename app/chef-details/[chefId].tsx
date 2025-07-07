@@ -1,12 +1,14 @@
 import HireSection from "@/components/HireSection";
 import ScheduleDatePicker from "@/components/ScheduleDatePicker";
 import TimeSelector from "@/components/TimeSelector";
+import { Chef, fetchChefs } from "@/constants/fetchChefs";
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-  Image,
   FlatList,
+  Image,
   StatusBar,
   StyleSheet,
   Text,
@@ -14,25 +16,32 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { chefs } from "@/constants/chefData";
-
 
 export default function ChefDetails() {
   const { chefId } = useLocalSearchParams();
-  const chef = chefs.find((c) => c.id === chefId);
-  const [showTooltip, setShowTooltip] = useState(false);
 
-  // Schedule section
+  const { data: chefs = [] } = useQuery({
+    queryKey: ["chefs"],
+    queryFn: fetchChefs,
+  });
+  
+
+  const chef: Chef | undefined = chefs.find((c) => c.id === chefId);
+  
+
+  const [showTooltip, setShowTooltip] = useState(false);
   const [selectedDay, setSelectedDay] = useState(0);
+  const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
+  const [startTime, setStartTime] = useState("");
+  const [hours, setHours] = useState(1);
+  const [note, setNote] = useState("");
 
   const getUpcomingDays = () => {
     const days = [];
     const today = new Date();
-
     for (let i = 0; i < 14; i++) {
       const date = new Date();
       date.setDate(today.getDate() + i);
-
       days.push({
         id: i.toString(),
         dayName: date.toLocaleDateString("en-US", { weekday: "short" }),
@@ -42,24 +51,14 @@ export default function ChefDetails() {
         isToday: i === 0,
       });
     }
-
     return days;
   };
 
   const upcomingDays = getUpcomingDays();
 
-  // Time selector
-  const [selectedTimes, setSelectedTimes] = useState<string[]>([]);
-  const [startTime, setStartTime] = useState("");
-  const [hours, setHours] = useState(1);
-
-  const [note, setNote] = useState("");
-
   const handleHireChef = () => {
-  console.log("Hired with note:", note);
-  // Navigate or show confirmation
-};
-
+    console.log("Hired with note:", note);
+  };
 
   if (!chef) {
     return (
@@ -96,9 +95,10 @@ export default function ChefDetails() {
                 </TouchableOpacity>
                 <Text style={styles.title}>{chef.name}</Text>
               </View>
+
               <View style={styles.headerContainer}>
                 <Image
-                  source={{ uri: chef?.image }}
+                  source={{ uri: chef.imageUrl }}
                   style={styles.chefImage}
                   resizeMode="cover"
                 />
@@ -109,9 +109,9 @@ export default function ChefDetails() {
                       numberOfLines={1}
                       ellipsizeMode="tail"
                     >
-                      {chef?.name}
+                      {chef.name}
                     </Text>
-                    {chef?.verified && (
+                    {chef.verified && (
                       <TouchableOpacity
                         onPress={() => setShowTooltip(!showTooltip)}
                         style={{ position: "relative" }}
@@ -135,22 +135,26 @@ export default function ChefDetails() {
                   </View>
                   <Text style={styles.specialty}>Specialty</Text>
                   <Text style={styles.cuisine}>
-                    {chef?.specialties?.join(", ")}
+                    {Array.isArray(chef.specialties)
+                      ? chef.specialties.join(", ")
+                      : "Not specified"}
                   </Text>
                   <View style={styles.ratingRow}>
                     <Ionicons name="star" size={16} color="#FDC913" />
-                    <Text style={styles.rating}>{chef?.rating}</Text>
+                    <Text style={styles.rating}>{chef.rating}</Text>
                   </View>
-                  <Text style={styles.price}>Rs. {chef?.pricePerHour}/Hr</Text>
+                  <Text style={styles.price}>Rs. {chef.pricePerHour}/Hr</Text>
                 </View>
               </View>
+
               <ScheduleDatePicker
                 upcomingDays={upcomingDays}
                 selectedDay={selectedDay}
                 setSelectedDay={setSelectedDay}
               />
+
               <TimeSelector
-                times={chef.availableTimes}
+                times={chef.available_times}
                 selectedTimes={selectedTimes}
                 setSelectedTimes={setSelectedTimes}
                 startTime={startTime}
@@ -158,9 +162,13 @@ export default function ChefDetails() {
                 hours={hours}
                 setHours={setHours}
               />
-              <HireSection note={note} setNote={setNote} onHire={handleHireChef} />
+
+              <HireSection
+                note={note}
+                setNote={setNote}
+                onHire={handleHireChef}
+              />
             </>
-            
           )}
           contentContainerStyle={{ paddingBottom: 80 }}
           keyExtractor={(_, index) => index.toString()}
@@ -169,6 +177,9 @@ export default function ChefDetails() {
     </>
   );
 }
+
+// ✅ styles remain unchanged
+
 
 const styles = StyleSheet.create({
   container: {
@@ -220,7 +231,7 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 24,
     fontWeight: "bold",
-    maxWidth: "85%",
+    maxWidth: "100%",
   },
   verifiedIcon: {
     marginLeft: 6,
