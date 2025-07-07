@@ -1,20 +1,22 @@
-// chef.tsx (same structure, with changes to data and filters)
+// app/(tabs)/chef.tsx
 import FilterModal from "@/components/FilterModal";
 import HeaderSection from "@/components/HeaderSection";
 import ItemCard from "@/components/ItemCard";
 import SearchBarWithFilter from "@/components/SearchBarWithFilter";
-import { chefs } from "@/constants/chefData";
+import { fetchChefs } from "@/constants/fetchChefs";
+import { useQuery } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FlatList, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const addresses = ["1234 Culinary Street, Flavor Town, Near Food Plaza, Opp. Tasty Tower, Apt 56, Delight City, Gourmet State"];
+const addresses = [
+  "1234 Culinary Street, Flavor Town, Near Food Plaza, Opp. Tasty Tower, Apt 56, Delight City, Gourmet State",
+];
 
 export default function ChefScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredChefs, setFilteredChefs] = useState(chefs);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedExperience, setSelectedExperience] = useState<string[]>([]);
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
@@ -22,24 +24,44 @@ export default function ChefScreen() {
 
   const selectedAddress = addresses[0].split(" ").slice(0, 4).join(" ") + "...";
 
+  const { data: chefs = [], isLoading } = useQuery({
+    queryKey: ["chefs"],
+    queryFn: fetchChefs,
+  });
+
+
   const toggleFavorite = (id: string) => {
-    setFavorites((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
+    setFavorites((prev) =>
+      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
+    );
   };
 
-  useEffect(() => {
-    const lowerQuery = searchQuery.toLowerCase();
-    const results = chefs.filter(
-      (chef) =>
-        chef.name.toLowerCase().includes(lowerQuery) ||
-        chef.cuisine.toLowerCase().includes(lowerQuery)
-    );
-    setFilteredChefs(results);
-  }, [searchQuery]);
+  // ✅ Directly filter based on search query (no useEffect, no extra state)
+  const filteredChefs = chefs.filter(
+    (chef) =>
+      chef.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      chef.cuisine.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const filterSections = [
-    { label: "Experience Level", options: ["Beginner", "Intermediate", "Expert"], selected: selectedExperience, setSelected: setSelectedExperience },
-    { label: "Cuisine Specialties", options: ["Italian", "Indian", "French", "Japanese"], selected: selectedSpecialties, setSelected: setSelectedSpecialties },
-    { label: "Service Type", options: ["Home Cook", "Event Catering", "Meal Plan"], selected: selectedServices, setSelected: setSelectedServices },
+    {
+      label: "Experience Level",
+      options: ["Beginner", "Intermediate", "Expert"],
+      selected: selectedExperience,
+      setSelected: setSelectedExperience,
+    },
+    {
+      label: "Cuisine Specialties",
+      options: ["Italian", "Indian", "French", "Japanese"],
+      selected: selectedSpecialties,
+      setSelected: setSelectedSpecialties,
+    },
+    {
+      label: "Service Type",
+      options: ["Home Cook", "Event Catering", "Meal Plan"],
+      selected: selectedServices,
+      setSelected: setSelectedServices,
+    },
   ];
 
   return (
@@ -49,9 +71,14 @@ export default function ChefScreen() {
         <StatusBar barStyle="light-content" backgroundColor="#000" />
         <View style={styles.container}>
           <HeaderSection address={selectedAddress} />
-          <SearchBarWithFilter searchQuery={searchQuery} setSearchQuery={setSearchQuery} onOpenFilter={() => setShowFilterModal(true)} />
-          
+          <SearchBarWithFilter
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            onOpenFilter={() => setShowFilterModal(true)}
+          />
+
           <Text style={styles.sectionTitle}>All Chefs</Text>
+
           <FlatList
             data={filteredChefs}
             keyExtractor={(item) => item.id}
@@ -63,18 +90,39 @@ export default function ChefScreen() {
                 item={item}
                 isFavorite={favorites.includes(item.id)}
                 toggleFavorite={toggleFavorite}
-                onArrowPress={() => router.push({ pathname: "/chef-details/[chefId]", params: { chefId: item.id } })}
+                onArrowPress={() =>
+                  router.push({
+                    pathname: "/chef-details/[chefId]",
+                    params: { chefId: item.id },
+                  })
+                }
               />
             )}
           />
         </View>
-        <FilterModal visible={showFilterModal} onClose={() => setShowFilterModal(false)} onApply={() => setShowFilterModal(false)} sections={filterSections} />
+
+        <FilterModal
+          visible={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          onApply={() => setShowFilterModal(false)}
+          sections={filterSections}
+        />
       </SafeAreaView>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000", paddingHorizontal: 16, paddingTop: 40 },
-  sectionTitle: { color: "#fff", fontSize: 20, fontWeight: "bold", marginBottom: 12 },
+  container: {
+    flex: 1,
+    backgroundColor: "#000",
+    paddingHorizontal: 16,
+    paddingTop: 40,
+  },
+  sectionTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
 });
