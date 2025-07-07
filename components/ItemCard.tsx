@@ -19,7 +19,7 @@ export default function ItemCard({
   return (
     <View style={styles.card}>
       <View style={styles.imageWrapper}>
-        <Image source={{ uri: item.image }} style={styles.image} />
+        <Image source={{ uri: item.imageUrl }} style={styles.image} />
         <TouchableOpacity style={styles.heartIcon} onPress={() => toggleFavorite(item.id)}>
           <Ionicons
             name={isFavorite ? "heart" : "heart-outline"}

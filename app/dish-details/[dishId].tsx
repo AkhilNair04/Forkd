@@ -1,5 +1,7 @@
-import { dishes } from "@/constants/dishData";
+import { ChefForDish, fetchChefsForDish } from "@/constants/fetchChefsForDish";
+import { Dish, fetchDishes } from "@/constants/fetchDishes";
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -17,7 +19,21 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function DishDetailScreen() {
   const { dishId } = useLocalSearchParams();
   const dishIdString = Array.isArray(dishId) ? dishId[0] : dishId;
-  const dish = dishes.find((d) => d.id === dishIdString);
+
+  const { data: dishes = [], isLoading } = useQuery({
+    queryKey: ["dishes"],
+    queryFn: fetchDishes,
+  });
+
+
+  const { data: chefs = [], isLoading: isChefsLoading } = useQuery<
+    ChefForDish[]
+  >({
+    queryKey: ["chefs-for-dish", dishIdString],
+    queryFn: () => fetchChefsForDish(dishIdString),
+  });
+
+  const dish: Dish | undefined = dishes.find((c) => c.id === dishIdString);
 
   const [quantity, setQuantity] = useState(1);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -31,7 +47,13 @@ export default function DishDetailScreen() {
     "Delivery Time",
   ];
 
-  if (!dish) return <Text style={styles.error}>Dish not found</Text>;
+  if (isLoading) {
+    return <Text style={styles.error}>Loading dish...</Text>;
+  }
+
+  if (!dish) {
+    return <Text style={styles.error}>Dish not found</Text>;
+  }
 
   return (
     <>
@@ -47,21 +69,21 @@ export default function DishDetailScreen() {
             >
               <Ionicons name="chevron-back" size={20} color="#000" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{dish.name} Details</Text>
+            <Text style={styles.headerTitle}>{dish.title} Details</Text>
           </View>
 
           {/* Dish Image */}
-          <Image source={{ uri: dish.image }} style={styles.image} />
+          <Image source={{ uri: dish.imageUrl }} style={styles.image} />
 
           <View style={styles.content}>
             {/* Tags */}
             <Text style={styles.tags}>
-              {dish.tags.map((tag: any) => `#${tag}`).join(" ")}
+              {dish.tags?.map((tag) => `#${tag}`).join(" ") || ""}
             </Text>
 
             {/* Title + Quantity */}
             <View style={styles.titleRow}>
-              <Text style={styles.title}>{dish.name}</Text>
+              <Text style={styles.title}>{dish.title}</Text>
               <View style={styles.quantityContainer}>
                 <TouchableOpacity
                   style={styles.quantityButton}
@@ -118,11 +140,10 @@ export default function DishDetailScreen() {
             </View>
 
             {/* Chefs List */}
-
             <FlatList
-              data={dish.chefs}
+              data={chefs}
               keyExtractor={(_, index) => index.toString()}
-              scrollEnabled={false} // Important: prevents inner scroll clash with ScrollView
+              scrollEnabled={false}
               renderItem={({ item }) => {
                 const isSelected = selectedChef === item.name;
                 return (
@@ -130,7 +151,7 @@ export default function DishDetailScreen() {
                     onPress={() => setSelectedChef(item.name)}
                     style={[
                       styles.chefCard,
-                      isSelected && styles.selectedChefCard, // apply style if selected
+                      isSelected && styles.selectedChefCard,
                     ]}
                   >
                     <Image
@@ -139,7 +160,6 @@ export default function DishDetailScreen() {
                     />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.chefName}>{item.name}</Text>
-
                       <View style={styles.ratingPriceRow}>
                         <View style={styles.chefRatingContainer}>
                           <Ionicons name="star" size={16} color="#FDC913" />
@@ -148,7 +168,6 @@ export default function DishDetailScreen() {
                         </View>
                       </View>
                     </View>
-
                     <Text style={styles.priceText}>
                       ₹{item.price * quantity}
                     </Text>
@@ -156,6 +175,8 @@ export default function DishDetailScreen() {
                 );
               }}
             />
+
+            {/* Order Button */}
             <TouchableOpacity style={styles.orderButton}>
               <Text style={styles.orderButtonText}>Place Order</Text>
             </TouchableOpacity>

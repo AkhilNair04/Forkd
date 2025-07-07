@@ -9,6 +9,10 @@ import "react-native-reanimated";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { CartProvider } from "../context/CartContext";
 
+// ✅ React Query imports
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
@@ -19,23 +23,26 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <CartProvider>
-        <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-          <Stack>
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="welcome-screen" options={{ headerShown: false }} />
-            <Stack.Screen name="select-lang" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="favorites" options={{ headerShown: false }} />
-            <Stack.Screen name="settings-demo" options={{ headerShown: false }} />
-            <Stack.Screen name="notification-demo" options={{ headerShown: false }} />
-            <Stack.Screen name="chat" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" />
-          </Stack>
-          <StatusBar style="auto" />
-        </ThemeProvider>
-      </CartProvider>
+      {/* ✅ React Query wraps everything */}
+      <QueryClientProvider client={queryClient}>
+        <CartProvider>
+          <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+            <Stack>
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="welcome-screen" options={{ headerShown: false }} />
+              <Stack.Screen name="select-lang" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="favorites" options={{ headerShown: false }} />
+              <Stack.Screen name="settings-demo" options={{ headerShown: false }} />
+              <Stack.Screen name="notification-demo" options={{ headerShown: false }} />
+              <Stack.Screen name="chat" options={{ headerShown: false }} />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+            <StatusBar style="auto" />
+          </ThemeProvider>
+        </CartProvider>
+      </QueryClientProvider>
     </GestureHandlerRootView>
   );
 }
