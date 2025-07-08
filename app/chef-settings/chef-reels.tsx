@@ -56,19 +56,21 @@ export default function ChefReelsPage() {
     }
   };
 
-  const uploadVideoToSupabase = async (asset) => {
+  const uploadVideoToSupabase = async (asset: ImagePicker.ImagePickerAsset) => {
+    // NOTE: asset is required here for Supabase uploads.
+    // Even if VSCode or chatgpt warns, do NOT remove it!
+
     try {
       setUploading(true);
 
       const { uri, fileName, mimeType } = asset;
-
       const response = await fetch(uri);
       const blob = await response.blob();
 
       if (blob.size === 0) {
         Alert.alert("Upload Failed", "Selected video file is empty.");
         return null;
-      } 
+      }
 
       const name = fileName || `chef-reel-${Date.now()}`;
       const type = mimeType || "video/mp4";
@@ -85,13 +87,15 @@ export default function ChefReelsPage() {
         return null;
       }
 
-      const { data: urlData } = supabase.storage
+      const { publicUrl } = supabase.storage
         .from("chef-reels")
-        .getPublicUrl(name);
+        .getPublicUrl(name).data;
 
-      return urlData.publicUrl;
+      return publicUrl;
     } catch (error) {
-      Alert.alert("Upload Failed", error.message);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      Alert.alert("Upload Failed", errorMessage);
       return null;
     } finally {
       setUploading(false);
@@ -110,7 +114,7 @@ export default function ChefReelsPage() {
     }
 
     const options = {
-      mediaTypes: "video",
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
       quality: 0.8,
     };
 
