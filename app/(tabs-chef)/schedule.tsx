@@ -1,130 +1,169 @@
 // app/(tabs-chef)/schedule.tsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
+  FlatList,
   useColorScheme,
 } from 'react-native';
-import { Calendar } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  addDays,
+  format,
+  isSameMonth,
+  isSameDay,
+  parseISO,
+} from 'date-fns';
 
-// minimal dot interface
-interface Dot {
-  key: string;
-  color: string;
-}
-
-// our marked-dates entry
-interface MarkedDateProps {
-  dots: Dot[];
-  selected?: boolean;
-  selectedColor?: string;
-}
-
-// helper to format a Date as YYYY-MM-DD
-function formatDate(d: Date) {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-// month names for header
-const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December'
-];
+// your dot data:
+const MARKED: Record<string, string[]> = {
+  '2025-09-02': ['#C67C4E', '#4fc24f', '#845ec2'],
+  '2025-09-03': ['#0d99ff', '#0d99ff'],
+  '2025-09-06': ['#4fc24f'],
+  // …etc
+};
 
 export default function ScheduleScreen() {
   const colorScheme = useColorScheme();
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // track the displayed month
-  const [current, setCurrent] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
-  });
+  // Generate a flat array of Date objects for the calendar grid:
+  const calendarDays = useMemo(() => {
+    const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 0 });
+    const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 0 });
+    const days: Date[] = [];
+    let cursor = start;
+    while (cursor <= end) {
+      days.push(cursor);
+      cursor = addDays(cursor, 1);
+    }
+    return days;
+  }, [currentMonth]);
 
-  // sample multi-dot markings
-  const markedDates: Record<string, MarkedDateProps> = {
-    '2025-09-02': {
-      selected: true,
-      selectedColor: '#C67C4E',
-      dots: [
-        { key: 'chef', color: '#C67C4E' },
-        { key: 'green', color: '#4fc24f' },
-        { key: 'purple', color: '#845ec2' },
-      ],
-    },
-    '2025-09-03': { dots: [{ key: 'blue1', color: '#0d99ff' }, { key: 'blue2', color: '#0d99ff' }] },
-    '2025-09-06': { dots: [{ key: 'green', color: '#4fc24f' }] },
-    // …add your other dates here
+  const prevMonth = () =>
+    setCurrentMonth(m => addDays(startOfMonth(m), -1));
+  const nextMonth = () =>
+    setCurrentMonth(m => addDays(endOfMonth(m), 1));
+
+  const renderDay = ({ item: date }: { item: Date }) => {
+    const key = format(date, 'yyyy-MM-dd');
+    const dots = MARKED[key] || [];
+    const inMonth = isSameMonth(date, currentMonth);
+    return (
+      <View style={[styles.dayCell, !inMonth && styles.outsideMonth]}>
+        <Text style={[styles.dayText, isSameDay(date, new Date()) && styles.todayText]}>
+          {format(date, 'd')}
+        </Text>
+        <View style={styles.dotsRow}>
+          {dots.map((color, i) => (
+            <View key={i} style={[styles.dot, { backgroundColor: color }]} />
+          ))}
+        </View>
+      </View>
+    );
   };
-
-  // handlers to page months
-  const prevMonth = () => setCurrent(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
-  const nextMonth = () => setCurrent(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
 
   return (
     <View style={styles.container}>
-      <Calendar
-        current={formatDate(current)}
-        hideArrows
-        enableSwipeMonths
-        markingType="multi-dot"
-        markedDates={markedDates}
-        renderHeader={(date: Date) => (
-          <View style={styles.header}>
-            <TouchableOpacity onPress={prevMonth}>
-              <Ionicons name="chevron-back" size={24} color="#fff" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>
-              {MONTHS[date.getMonth()]} {date.getFullYear()}
-            </Text>
-            <TouchableOpacity onPress={nextMonth}>
-              <Ionicons name="chevron-forward" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        )}
-        theme={{
-          backgroundColor: '#111',
-          calendarBackground: '#111',
-          monthTextColor: '#fff',
-          textSectionTitleColor: '#888',
-          dayTextColor: '#fff',
-          textDisabledColor: '#444',
-          selectedDayBackgroundColor: '#C67C4E',
-          selectedDayTextColor: '#fff',
-          todayTextColor: '#fff',
-        }}
-        style={styles.calendar}
+      {/* header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={prevMonth} style={styles.arrow}>
+          <Ionicons name="chevron-back" size={24} color="#fff" />
+        </TouchableOpacity>
+
+        <View style={styles.title}>
+          <Text style={styles.monthText}>
+            {format(currentMonth, 'LLLL')}
+          </Text>
+          <Text style={styles.yearText}>
+            {format(currentMonth, 'yyyy')}
+          </Text>
+        </View>
+
+        <TouchableOpacity onPress={nextMonth} style={styles.arrow}>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      {/* weekdays header */}
+      <View style={styles.weekdays}>
+        {['S','M','T','W','T','F','S'].map((w,i) => (
+          <Text key={i} style={styles.weekdayText}>{w}</Text>
+        ))}
+      </View>
+
+      {/* days grid */}
+      <FlatList
+        data={calendarDays}
+        keyExtractor={d => d.toISOString()}
+        numColumns={7}
+        renderItem={renderDay}
+        scrollEnabled={false}
+        contentContainerStyle={styles.grid}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#111',
-    paddingTop: 24,
-  },
+  container: { flex: 1, backgroundColor: '#111', paddingTop: 24 },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     marginHorizontal: 16,
     marginBottom: 8,
+    height: 60,
   },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 20,
+  arrow: { width: 40, alignItems: 'center' },
+  title: { flex: 1, alignItems: 'center' },
+  monthText: { color: '#fff', fontSize: 24, fontWeight: '600' },
+  yearText: { color: '#888', fontSize: 14, marginTop: 2 },
+
+  weekdays: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 4,
+  },
+  weekdayText: {
+    flex: 1,
+    color: '#888',
+    textAlign: 'center',
     fontWeight: '600',
   },
-  calendar: {
-    borderRadius: 12,
-    marginHorizontal: 16,
-    overflow: 'hidden',
+
+  grid: { paddingHorizontal: 16 },
+  dayCell: {
+    flex: 1,
+    aspectRatio: 1,               // square cells
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: 2,
+    borderRadius: 6,
+  },
+  outsideMonth: {
+    opacity: 0.3,
+  },
+  dayText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  todayText: {
+    textDecorationLine: 'underline',
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    marginTop: 4,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginHorizontal: 1,
   },
 });
