@@ -1,22 +1,23 @@
-import { supabase } from "@/constants/supabase";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { getCurrentUserProfile, supabase, updateUserAvatar, updateUserProfile, uploadAvatar } from '@/lib/supabase';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface UserProfile {
   name: string;
@@ -42,6 +43,7 @@ export default function ProfileScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Profile completion form data
   const [profileForm, setProfileForm] = useState({
@@ -52,13 +54,14 @@ export default function ProfileScreen() {
   });
 
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+91 98765 43210",
-    userType: "customer",
-    avatar: "https://randomuser.me/api/portraits/men/75.jpg",
-    location: "Mumbai, Maharashtra",
-    joinDate: "January 2024",
+    name: '',
+    email: '',
+    phone: '',
+    userType: 'customer',
+    avatar: 'https://ui-avatars.com/api/?name=User&background=666&color=fff&size=256',
+    location: '',
+    joinDate: '',
+    bio: ''
   });
 
   const [userStats, setUserStats] = useState<UserStats>({
@@ -74,13 +77,51 @@ export default function ProfileScreen() {
 
   const loadUserProfile = async () => {
     try {
-      // In a real app, load from AsyncStorage or API
-      const savedProfile = await AsyncStorage.getItem("userProfile");
-      if (savedProfile) {
-        setUserProfile(JSON.parse(savedProfile));
+      setLoading(true);
+      
+      const userProfileData = await getCurrentUserProfile();
+      if (userProfileData && userProfileData.profile) {
+        const profile = userProfileData.profile;
+        const user = userProfileData;
+        
+        // Check if profile needs completion
+        if (!profile.full_name || !profile.location || !profile.user_type) {
+          setProfileForm({
+            full_name: profile.full_name || '',
+            location: profile.location || '',
+            user_type: profile.user_type || 'customer',
+            bio: profile.bio || ''
+          });
+          setShowProfileModal(true);
+        }
+        
+        setUserProfile({
+          name: profile.full_name || 'Complete your profile',
+          email: user.email || '',
+          phone: profile.phone || user.phone || '',
+          userType: profile.user_type || 'customer',
+          avatar: profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || 'User')}&background=C67C4E&color=fff&size=256`,
+          location: profile.location || '',
+          joinDate: new Date(user.created_at).toLocaleDateString('en-US', { 
+            month: 'long', 
+            year: 'numeric' 
+          }),
+          bio: profile.bio || ''
+        });
+
+        // Store user data in AsyncStorage for other parts of the app
+        await AsyncStorage.setItem('userProfile', JSON.stringify({
+          name: profile.full_name,
+          email: user.email,
+          userType: profile.user_type,
+          location: profile.location
+        }));
       }
     } catch (error) {
-      console.error("Error loading profile:", error);
+      console.error('Error loading profile:', error);
+      Alert.alert('Error', 'Failed to load profile data');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -115,42 +156,220 @@ export default function ProfileScreen() {
 
   const handleSaveProfile = async () => {
     if (!profileForm.full_name.trim()) {
-      Alert.alert("Missing Information", "Please enter your name");
+      Alert.alert('Missing Information', 'Please enter your name');
       return;
     }
 
     if (!profileForm.location) {
-      Alert.alert("Missing Information", "Please select your location");
+      Alert.alert('Missing Information', 'Please select your location');
       return;
     }
 
     setSaving(true);
     try {
-      // Save to AsyncStorage for now
-      const updatedProfile = {
-        ...userProfile,
-        name: profileForm.full_name,
-        location: profileForm.location,
-        userType: profileForm.user_type as "customer" | "chef",
-        bio: profileForm.bio,
-      };
+      const { error } = await updateUserProfile(profileForm);
 
-      await AsyncStorage.setItem("userProfile", JSON.stringify(updatedProfile));
-      setUserProfile(updatedProfile);
+      if (error) {
+        Alert.alert('Error', 'Failed to save profile. Please try again.');
+        return;
+      }
 
       setShowProfileModal(false);
-      Alert.alert("Success", "Your profile has been updated!");
+      loadUserProfile(); // Reload profile data
+      Alert.alert('Success', 'Your profile has been updated!');
     } catch (error) {
-      console.error("Profile save error:", error);
-      Alert.alert("Error", "Something went wrong. Please try again.");
+      console.error('Profile save error:', error);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
       setSaving(false);
     }
   };
 
   const handleLogoutWithConfirmation = () => {
-    console.log("Logout with confirmation button pressed"); // Debug log
+    console.log('Logout with confirmation button pressed'); // Debug log
     setShowLogoutModal(true);
+  };
+
+  const handleAvatarPress = async () => {
+    console.log('Avatar pressed!'); // Debug log
+    
+    try {
+      // Check if we're on web and use a different approach
+      if (typeof window !== 'undefined') {
+        console.log('Running on web, using file input'); // Debug log
+        
+        // Create a file input element for web
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        
+        input.onchange = async (e) => {
+          const file = (e.target as HTMLInputElement).files?.[0];
+          if (file) {
+            console.log('File selected:', file); // Debug log
+            
+            // Convert file to data URL for upload
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+              const dataUrl = event.target?.result as string;
+              console.log('File converted to data URL'); // Debug log
+              await uploadUserAvatar(dataUrl);
+            };
+            reader.readAsDataURL(file);
+          }
+        };
+        
+        input.click();
+        return;
+      }
+      
+      // For mobile, use expo-image-picker
+      console.log('Running on mobile, using image picker'); // Debug log
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      console.log('Image picker result:', result); // Debug log
+
+      if (!result.canceled && result.assets[0]) {
+        console.log('Image selected, uploading...'); // Debug log
+        await uploadUserAvatar(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error in handleAvatarPress:', error);
+      Alert.alert('Error', 'Failed to open image picker');
+    }
+  };
+
+  const pickImage = async (source: 'camera' | 'gallery') => {
+    try {
+      let result;
+      
+      if (source === 'camera') {
+        // Request camera permissions
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission required', 'Please allow camera access');
+          return;
+        }
+
+        result = await ImagePicker.launchCameraAsync({
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      } else {
+        // Request gallery permissions
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission required', 'Please allow access to your photos');
+          return;
+        }
+
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      }
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadUserAvatar(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to select image');
+    }
+  };
+
+  const uploadUserAvatar = async (imageUri: string) => {
+    try {
+      console.log('Starting avatar upload with URI:', imageUri); // Debug log
+      setUploadingAvatar(true);
+
+      // Upload image to Supabase Storage
+      console.log('Uploading to Supabase...'); // Debug log
+      const { data: avatarUrl, error: uploadError } = await uploadAvatar(imageUri);
+      
+      console.log('Upload result:', { avatarUrl, uploadError }); // Debug log
+      
+      if (uploadError) {
+        console.error('Upload error:', uploadError); // Debug log
+        Alert.alert('Upload Error', 'Failed to upload image');
+        return;
+      }
+
+      // Update profile with new avatar URL
+      console.log('Updating profile with avatar URL:', avatarUrl); // Debug log
+      const { error: updateError } = await updateUserAvatar(avatarUrl);
+      
+      if (updateError) {
+        console.error('Update error:', updateError); // Debug log
+        Alert.alert('Update Error', 'Failed to update profile');
+        return;
+      }
+
+      // Update local state
+      setUserProfile(prev => ({
+        ...prev,
+        avatar: avatarUrl || prev.avatar
+      }));
+
+      console.log('Avatar upload successful!'); // Debug log
+      Alert.alert('Success', 'Profile picture updated!');
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      Alert.alert('Error', 'Something went wrong');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleProfileUpdate = async () => {
+    setSaving(true);
+    try {
+      // Upsert to user_profiles table, using updateUserProfile helper
+      const { error } = await updateUserProfile({
+        full_name: profileForm.full_name,
+        location: profileForm.location,
+        user_type: profileForm.user_type === 'chef' ? 'chef' : 'customer',
+        bio: profileForm.bio
+      });
+
+      if (error) throw error;
+
+      // Update local user profile state
+      setUserProfile(prev => ({
+        ...prev,
+        name: profileForm.full_name,
+        location: profileForm.location,
+        userType: profileForm.user_type === 'chef' ? 'chef' : 'customer',
+        bio: profileForm.bio,
+      }));
+
+      // Save to AsyncStorage
+      await AsyncStorage.setItem('userProfile', JSON.stringify({
+        ...userProfile,
+        name: profileForm.full_name,
+        location: profileForm.location,
+        userType: profileForm.user_type,
+        bio: profileForm.bio,
+      }));
+
+      // Close the modal and reload profile data
+      setShowProfileModal(false);
+      loadUserProfile(); // Reload profile data
+      Alert.alert('Success', 'Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'There was an error updating your profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const StatCard = ({
@@ -200,40 +419,58 @@ export default function ProfileScreen() {
     <>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       <SafeAreaView style={styles.container}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Profile</Text>
-            <TouchableOpacity onPress={() => router.push("/settings-demo")}>
-              <Feather name="settings" size={24} color="#fff" />
-            </TouchableOpacity>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#C67C4E" />
+            <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
-
-          {/* Profile Card */}
-          <View style={styles.profileCard}>
-            <Image source={{ uri: userProfile.avatar }} style={styles.avatar} />
-            <View style={styles.profileInfo}>
-              <Text style={styles.userName}>{userProfile.name}</Text>
-              <Text style={styles.userType}>
-                {userProfile.userType === "customer"
-                  ? "👤 Customer"
-                  : "👨‍🍳 Chef"}
-              </Text>
-              <Text style={styles.userLocation}>📍 {userProfile.location}</Text>
-              <Text style={styles.joinDate}>
-                Member since {userProfile.joinDate}
-              </Text>
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.headerTitle}>Profile</Text>
+              <TouchableOpacity onPress={() => router.push('/settings-demo')}>
+                <Feather name="settings" size={24} color="#fff" />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => router.push("/customer-settings/customer-profile")}
-            >
-              <Feather name="edit-2" size={18} color="#C67C4E" />
-            </TouchableOpacity>
-          </View>
+
+            {/* Profile Card */}
+            <View style={styles.profileCard}>
+              <TouchableOpacity 
+                style={styles.avatarContainer}
+                onPress={handleAvatarPress}
+                disabled={uploadingAvatar}
+              >
+                <Image source={{ uri: userProfile.avatar }} style={styles.avatar} />
+                {uploadingAvatar && (
+                  <View style={styles.avatarLoader}>
+                    <ActivityIndicator size="small" color="#fff" />
+                  </View>
+                )}
+                <View style={styles.avatarOverlay}>
+                  <Ionicons name="camera" size={20} color="#fff" />
+                </View>
+              </TouchableOpacity>
+              <View style={styles.profileInfo}>
+                <Text style={styles.userName}>{userProfile.name}</Text>
+                <Text style={styles.userType}>
+                  {userProfile.userType === 'customer' ? '👤 Customer' : '👨‍🍳 Chef'}
+                </Text>
+                {userProfile.location && (
+                  <Text style={styles.userLocation}>📍 {userProfile.location}</Text>
+                )}
+                <Text style={styles.joinDate}>Member since {userProfile.joinDate}</Text>
+                {userProfile.bio && (
+                  <Text style={styles.userBio}>{userProfile.bio}</Text>
+                )}
+              </View>
+              <TouchableOpacity 
+                style={styles.editButton}
+                onPress={() => setShowProfileModal(true)}
+              >
+                <Feather name="edit-2" size={18} color="#C67C4E" />
+              </TouchableOpacity>
+            </View>
 
           {/* Stats Section */}
           <View style={styles.statsSection}>
@@ -341,6 +578,7 @@ export default function ProfileScreen() {
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </ScrollView>
+        )}
       </SafeAreaView>
 
       {/* Custom Logout Confirmation Modal */}
@@ -464,9 +702,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#000",
+    width: '100%',
+    height: '100%',
   },
   scrollContent: {
     paddingBottom: 100,
+    minHeight: '100%',
+    width: '100%',
+    flexGrow: 1,
   },
   header: {
     flexDirection: "row",
@@ -496,6 +739,31 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     marginRight: 15,
   },
+  avatarContainer: {
+    position: 'relative',
+    marginRight: 15,
+  },
+  avatarOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#C67C4E',
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  avatarLoader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   profileInfo: {
     flex: 1,
   },
@@ -518,6 +786,12 @@ const styles = StyleSheet.create({
   joinDate: {
     fontSize: 12,
     color: "#666",
+  },
+  userBio: {
+    fontSize: 13,
+    color: '#ccc',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   editButton: {
     backgroundColor: "#2a2a2a",
@@ -774,48 +1048,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 12,
   },
-  // User bio style
-  userBio: {
-    fontSize: 13,
-    color: "#ccc",
-    marginTop: 4,
-    fontStyle: "italic",
-  },
-  // Profile modal styles
-  profileModalContainer: {
-    backgroundColor: "#1a1a1a",
-    borderRadius: 20,
-    margin: 20,
-    maxHeight: "80%",
-    padding: 0,
-    overflow: "hidden",
-  },
-  profileModalContent: {
-    maxHeight: 400,
-    padding: 20,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#fff",
-    marginBottom: 8,
-  },
-  modalInput: {
-    backgroundColor: "#2a2a2a",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: "#fff",
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  bioInput: {
-    minHeight: 80,
-    textAlignVertical: "top",
-  },
   userTypeContainer: {
     flexDirection: "row",
     gap: 12,
@@ -856,5 +1088,40 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  // Enhanced profile modal styles
+  profileModalContainer: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 20,
+    margin: 20,
+    maxHeight: '80%',
+    padding: 0,
+    overflow: 'hidden',
+  },
+  profileModalContent: {
+    maxHeight: 400,
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  modalInput: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#fff',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  bioInput: {
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
 });

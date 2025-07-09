@@ -22,7 +22,7 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, width: '100%', height: '100%' }}>
       {/* ✅ React Query wraps everything */}
       <QueryClientProvider client={queryClient}>
         <CartProvider>

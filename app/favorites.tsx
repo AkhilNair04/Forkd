@@ -138,7 +138,12 @@ export default function FavoritesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
+  container: { 
+    flex: 1, 
+    backgroundColor: "#000",
+    width: '100%',
+    height: '100%',
+  },
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
