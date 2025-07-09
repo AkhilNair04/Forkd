@@ -3,8 +3,11 @@ import FilterModal from "@/components/FilterModal";
 import HeaderSection from "@/components/HeaderSection";
 import ItemCard from "@/components/ItemCard";
 import SearchBarWithFilter from "@/components/SearchBarWithFilter";
+import SkeletonCard from "@/components/SkeletonCard";
 import { fetchChefs } from "@/constants/fetchChefs";
-import { useQuery } from "@tanstack/react-query";
+import { fetchFavoriteChefs } from "@/constants/fetchFavoriteChefs";
+import { toggleFavoriteChef } from "@/constants/updateFavorites";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
 import { useState } from "react";
 import { FlatList, StatusBar, StyleSheet, Text, View } from "react-native";
@@ -17,31 +20,41 @@ const addresses = [
 export default function ChefScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedExperience, setSelectedExperience] = useState<string[]>([]);
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
+  const userId = "1";
   const selectedAddress = addresses[0].split(" ").slice(0, 4).join(" ") + "...";
+
+  const queryClient = useQueryClient();
 
   const { data: chefs = [], isLoading } = useQuery({
     queryKey: ["chefs"],
     queryFn: fetchChefs,
   });
 
+  const { data: favoriteChefs = [], refetch: refetchFavoriteChefs } = useQuery({
+    queryKey: ["favoriteChefs", userId],
+    queryFn: () => fetchFavoriteChefs(userId),
+  });
 
-  const toggleFavorite = (id: string) => {
-    setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
-    );
-  };
-
-  // ✅ Directly filter based on search query (no useEffect, no extra state)
-  const filteredChefs = chefs.filter(
-    (chef) =>
-      chef.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      chef.cuisine.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredChefs = chefs.filter((chef) => {
+  const name = chef.name?.toLowerCase() ?? "";
+  const cuisine = chef.cuisine?.toLowerCase() ?? "";
+  return (
+    name.includes(searchQuery.toLowerCase()) ||
+    cuisine.includes(searchQuery.toLowerCase())
   );
+});
+
+
+  const handleToggleFavorite = async (id: string, isCurrentlyFav: boolean) => {
+    await toggleFavoriteChef(userId, id, isCurrentlyFav);
+    await queryClient.invalidateQueries({
+      queryKey: ["favoriteChefs", userId],
+    });
+  };
 
   const filterSections = [
     {
@@ -79,26 +92,47 @@ export default function ChefScreen() {
 
           <Text style={styles.sectionTitle}>All Chefs</Text>
 
-          <FlatList
-            data={filteredChefs}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            columnWrapperStyle={{ justifyContent: "space-between" }}
-            contentContainerStyle={{ paddingBottom: 120 }}
-            renderItem={({ item }) => (
-              <ItemCard
-                item={item}
-                isFavorite={favorites.includes(item.id)}
-                toggleFavorite={toggleFavorite}
-                onArrowPress={() =>
-                  router.push({
-                    pathname: "/chef-details/[chefId]",
-                    params: { chefId: item.id },
-                  })
-                }
-              />
-            )}
-          />
+          {isLoading ? (
+            <FlatList
+              data={[...Array(6).keys()]}
+              keyExtractor={(item) => item.toString()}
+              numColumns={2}
+              columnWrapperStyle={{ justifyContent: "space-between" }}
+              contentContainerStyle={{ paddingBottom: 120 }}
+              renderItem={() => <SkeletonCard />}
+            />
+          ) : filteredChefs.length === 0 ? (
+            <View style={styles.emptyStateContainer}>
+              <Text style={styles.emptyStateText}>
+                No Chefs found matching your search.
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredChefs}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              columnWrapperStyle={{ justifyContent: "space-between" }}
+              contentContainerStyle={{ paddingBottom: 120 }}
+              renderItem={({ item }) => {
+                const isFav = favoriteChefs.some((c) => c.id === item.id);
+                return (
+                  <ItemCard
+                    item={item}
+                    isFavorite={isFav}
+                    type="chef"
+                    onArrowPress={() =>
+                      router.push({
+                        pathname: "/chef-details/[chefId]",
+                        params: { chefId: item.id },
+                      })
+                    }
+                    onToggleDone={() => handleToggleFavorite(item.id, isFav)}
+                  />
+                );
+              }}
+            />
+          )}
         </View>
 
         <FilterModal
@@ -124,5 +158,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 12,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyStateText: {
+    marginBottom: 150,
+    color: "#fff",
+    fontSize: 16,
+    textAlign: "center",
+    opacity: 0.7,
   },
 });

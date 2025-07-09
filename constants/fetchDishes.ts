@@ -12,13 +12,15 @@ export interface Dish {
   is_veg: boolean;
   cuisine: string;
   imageUrl: string;
+  rating:string,
+  reviews:string
 }
 
 export async function fetchDishes(): Promise<Dish[]> {
   const { data, error } = await supabase
     .from("Dish")
     .select(
-      "id, title, description, ingredients, tags, is_available, is_veg, cuisine"
+      "id, title, description, ingredients, tags, is_available, is_veg, cuisine,rating_avg,reviews"
     );
 
   if (error || !data) {
@@ -40,6 +42,8 @@ export async function fetchDishes(): Promise<Dish[]> {
 
     return {
       ...dish,
+      rating:dish.rating_avg,
+      reviews:dish.reviews,
       tags: parsedTags,
       imageUrl: publicUrlData?.publicUrl || "",
     };
