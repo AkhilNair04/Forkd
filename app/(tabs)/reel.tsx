@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Dimensions,
@@ -127,7 +127,6 @@ export default function ReelScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userProfile, setUserProfile] = useState<any>(null);
   const { addToCart } = useCart();
-  const videoRefs = useRef<any[]>([]);
 
   useEffect(() => {
     loadUserProfile();
@@ -137,6 +136,17 @@ export default function ReelScreen() {
     const profile = await getCurrentUserProfile();
     setUserProfile(profile);
   };
+
+  const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
+    if (viewableItems.length > 0) {
+      setCurrentIndex(viewableItems[0].index || 0);
+    }
+  }, []);
+
+  const viewabilityConfig = useCallback(() => ({
+    itemVisiblePercentThreshold: 80,
+    waitForInteraction: false
+  }), []);
 
   const handleLike = (reelId: string) => {
     setReels(prevReels => 
@@ -178,7 +188,7 @@ export default function ReelScreen() {
         price: dish.price,
         image: reels.find(r => r.dish?.id === dish.id)?.thumbnail || '',
         quantity: 1,
-        meal_type: 'dish', // Add required meal_type field
+        meal_type: 'dish',
       });
       Alert.alert('Added to Cart', `${dish.name} has been added to your cart!`);
     }
@@ -194,72 +204,66 @@ export default function ReelScreen() {
 
   const renderReelItem = ({ item, index }: { item: Reel; index: number }) => (
     <View style={styles.reelContainer}>
-      {/* Video Background */}
+      {/* Background Image */}
       <Image 
         source={{ uri: item.thumbnail }} 
-        style={styles.videoBackground} 
+        style={styles.backgroundImage} 
         resizeMode="cover"
       />
       
-      {/* Overlay for better text visibility */}
+      {/* Dark Overlay */}
       <View style={styles.overlay} />
 
       {/* Top Header */}
-      <View style={styles.topHeader}>
+      <View style={styles.header}>
         <Text style={styles.headerTitle}>Reels</Text>
-        <TouchableOpacity>
-          <Ionicons name="camera" size={22} color="#fff" />
+        <TouchableOpacity style={styles.cameraButton}>
+          <Ionicons name="camera" size={24} color="white" />
         </TouchableOpacity>
       </View>
 
-      {/* Bottom Content */}
-      <View style={styles.bottomContent}>
-        {/* Left Side - Content Info */}
+      {/* Content Container */}
+      <View style={styles.contentContainer}>
+        {/* Left Content */}
         <View style={styles.leftContent}>
           {/* Chef Info */}
           <TouchableOpacity 
-            style={styles.chefInfo}
+            style={styles.chefContainer}
             onPress={() => navigateToChefProfile(item.chef.id)}
           >
             <Image source={{ uri: item.chef.avatar }} style={styles.chefAvatar} />
-            <View style={styles.chefDetails}>
-              <View style={styles.chefNameContainer}>
+            <View style={styles.chefInfo}>
+              <View style={styles.chefNameRow}>
                 <Text style={styles.chefName}>{item.chef.name}</Text>
                 {item.chef.verified && (
-                  <Ionicons name="checkmark-circle" size={14} color="#C67C4E" />
+                  <Ionicons name="checkmark-circle" size={16} color="#D4A373" />
                 )}
               </View>
               <TouchableOpacity 
-                style={[
-                  styles.followButton, 
-                  item.isFollowing && styles.followingButton
-                ]}
+                style={[styles.followBtn, item.isFollowing && styles.followingBtn]}
                 onPress={() => handleFollow(item.chef.id)}
               >
-                <Text style={[
-                  styles.followText, 
-                  item.isFollowing && styles.followingText
-                ]}>
+                <Text style={[styles.followText, item.isFollowing && styles.followingText]}>
                   {item.isFollowing ? 'Following' : 'Follow'}
                 </Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
 
-          {/* Video Title & Description */}
+          {/* Video Info */}
           <Text style={styles.videoTitle}>{item.title}</Text>
           <Text style={styles.videoDescription} numberOfLines={2}>
             {item.description}
           </Text>
 
           {/* Tags */}
-          <View style={styles.tagsContainer}>
+          <View style={styles.tagsRow}>
             {item.tags.slice(0, 3).map((tag, idx) => (
               <Text key={idx} style={styles.tag}>{tag}</Text>
             ))}
           </View>
 
-          {/* Dish Info & Order Button */}
+          {/* Dish Container */}
           {item.dish && (
             <TouchableOpacity 
               style={styles.dishContainer}
@@ -267,10 +271,10 @@ export default function ReelScreen() {
             >
               <View style={styles.dishInfo}>
                 <Text style={styles.dishName}>{item.dish.name}</Text>
-                <Text style={styles.dishPrice}>${item.dish.price / 100}</Text>
+                <Text style={styles.dishPrice}>${(item.dish.price / 100).toFixed(2)}</Text>
               </View>
               <TouchableOpacity 
-                style={styles.orderButton}
+                style={styles.orderBtn}
                 onPress={() => handleAddToCart(item.dish)}
               >
                 <Text style={styles.orderText}>Order</Text>
@@ -279,48 +283,46 @@ export default function ReelScreen() {
           )}
         </View>
 
-        {/* Right Side - Action Buttons */}
+        {/* Right Actions */}
         <View style={styles.rightActions}>
-          {/* Like Button */}
           <TouchableOpacity 
-            style={styles.actionButton}
+            style={styles.actionBtn}
             onPress={() => handleLike(item.id)}
           >
             <Ionicons 
               name={item.isLiked ? "heart" : "heart-outline"} 
-              size={28} 
-              color={item.isLiked ? "#FF6B6B" : "#fff"} 
+              size={32} 
+              color={item.isLiked ? "#FF6B6B" : "white"} 
             />
-            <Text style={styles.actionText}>{item.likes > 1000 ? `${(item.likes / 1000).toFixed(1)}k` : item.likes}</Text>
+            <Text style={styles.actionCount}>
+              {item.likes > 1000 ? `${(item.likes / 1000).toFixed(1)}k` : item.likes}
+            </Text>
           </TouchableOpacity>
 
-          {/* Comment Button */}
           <TouchableOpacity 
-            style={styles.actionButton}
+            style={styles.actionBtn}
             onPress={() => handleComment(item.id)}
           >
-            <Ionicons name="chatbubble-outline" size={28} color="#fff" />
-            <Text style={styles.actionText}>{item.comments}</Text>
+            <Ionicons name="chatbubble-outline" size={32} color="white" />
+            <Text style={styles.actionCount}>{item.comments}</Text>
           </TouchableOpacity>
 
-          {/* Share Button */}
           <TouchableOpacity 
-            style={styles.actionButton}
+            style={styles.actionBtn}
             onPress={() => handleShare(item.id)}
           >
-            <Ionicons name="share-outline" size={28} color="#fff" />
-            <Text style={styles.actionText}>{item.shares}</Text>
+            <Ionicons name="share-outline" size={32} color="white" />
+            <Text style={styles.actionCount}>{item.shares}</Text>
           </TouchableOpacity>
 
-          {/* More Options */}
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="ellipsis-horizontal" size={28} color="#fff" />
+          <TouchableOpacity style={styles.actionBtn}>
+            <Ionicons name="ellipsis-horizontal" size={32} color="white" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Video Duration Indicator */}
-      <View style={styles.durationIndicator}>
+      {/* Duration Badge */}
+      <View style={styles.durationBadge}>
         <Text style={styles.durationText}>{item.duration}s</Text>
       </View>
     </View>
@@ -330,17 +332,21 @@ export default function ReelScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        <StatusBar barStyle="light-content" backgroundColor="black" />
         <FlatList
           data={reels}
           renderItem={renderReelItem}
           keyExtractor={(item) => item.id}
-          pagingEnabled
+          pagingEnabled={true}
           showsVerticalScrollIndicator={false}
           snapToInterval={height}
           snapToAlignment="start"
           decelerationRate="fast"
           scrollEventThrottle={16}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={3}
+          initialNumToRender={1}
+          windowSize={5}
           getItemLayout={(data, index) => ({
             length: height,
             offset: height * index,
@@ -350,6 +356,8 @@ export default function ReelScreen() {
             const index = Math.round(event.nativeEvent.contentOffset.y / height);
             setCurrentIndex(index);
           }}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig()}
         />
       </View>
     </>
@@ -360,15 +368,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
-    width: '100%',
-    height: '100%',
   },
   reelContainer: {
     width: width,
     height: height,
     position: 'relative',
   },
-  videoBackground: {
+  backgroundImage: {
     width: '100%',
     height: '100%',
     position: 'absolute',
@@ -379,179 +385,184 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
-  topHeader: {
+  header: {
     position: 'absolute',
-    top: 50,
+    top: 0,
     left: 0,
     right: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 10,
     zIndex: 10,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff',
+    color: 'white',
   },
-  bottomContent: {
+  cameraButton: {
+    padding: 5,
+  },
+  contentContainer: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 100,
     left: 0,
     right: 0,
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingBottom: 20,
     zIndex: 10,
   },
   leftContent: {
     flex: 1,
-    marginRight: 16,
-    maxWidth: width * 0.7,
+    paddingRight: 80,
   },
-  chefInfo: {
+  chefContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  chefAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginRight: 10,
-  },
-  chefDetails: {
-    flex: 1,
-    minWidth: 0,
-  },
-  chefNameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-    flexWrap: 'wrap',
-  },
-  chefName: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginRight: 6,
-    flexShrink: 1,
-  },
-  followButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#C67C4E',
-    borderRadius: 16,
+    marginBottom: 16,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 25,
+    padding: 10,
     alignSelf: 'flex-start',
   },
-  followingButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#fff',
+  chefAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: '#D4A373',
   },
-  followText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#fff',
+  chefInfo: {
+    flex: 1,
   },
-  followingText: {
-    color: '#fff',
+  chefNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
   },
-  videoTitle: {
+  chefName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 6,
-    lineHeight: 20,
+    color: 'white',
+    marginRight: 8,
+    flex: 1,
+  },
+  followBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    backgroundColor: '#D4A373',
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  followingBtn: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'white',
+  },
+  followText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  followingText: {
+    color: 'white',
+  },
+  videoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 8,
+    lineHeight: 24,
   },
   videoDescription: {
-    fontSize: 13,
-    color: '#ddd',
-    marginBottom: 10,
-    lineHeight: 18,
+    fontSize: 15,
+    color: '#e0e0e0',
+    marginBottom: 12,
+    lineHeight: 22,
   },
-  tagsContainer: {
+  tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   tag: {
-    fontSize: 12,
-    color: '#C67C4E',
-    marginRight: 8,
-    marginBottom: 2,
+    fontSize: 13,
+    color: '#D4A373',
+    marginRight: 10,
+    marginBottom: 4,
   },
   dishContainer: {
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 16,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 4,
+    alignSelf: 'flex-start',
   },
   dishInfo: {
     flex: 1,
     marginRight: 12,
-    minWidth: 0,
   },
   dishName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 2,
+    color: 'white',
+    marginBottom: 4,
   },
   dishPrice: {
-    fontSize: 13,
-    color: '#C67C4E',
+    fontSize: 14,
+    color: '#D4A373',
     fontWeight: 'bold',
   },
-  orderButton: {
-    backgroundColor: '#C67C4E',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-    flexShrink: 0,
+  orderBtn: {
+    backgroundColor: '#D4A373',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    alignItems: 'center',
   },
   orderText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#fff',
+    color: 'white',
   },
   rightActions: {
+    position: 'absolute',
+    right: 16,
+    bottom: 20,
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    width: 60,
-    paddingBottom: 10,
   },
-  actionButton: {
+  actionBtn: {
     alignItems: 'center',
-    marginBottom: 20,
-    width: 50,
+    marginBottom: 24,
+    padding: 8,
   },
-  actionText: {
-    fontSize: 11,
-    color: '#fff',
+  actionCount: {
+    fontSize: 12,
+    color: 'white',
     marginTop: 4,
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
   },
-  durationIndicator: {
+  durationBadge: {
     position: 'absolute',
-    top: 90,
+    top: 100,
     right: 16,
     backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   durationText: {
-    fontSize: 11,
-    color: '#fff',
+    fontSize: 12,
+    color: 'white',
     fontWeight: 'bold',
   },
 });
