@@ -47,6 +47,13 @@ export default function ChatScreen() {
     };
   }, []);
 
+  // Mark messages as read when chat is viewed
+  useEffect(() => {
+    if (messages.length > 0 && currentUserId && chatId) {
+      ChatService.markMessagesAsRead(chatId as string, currentUserId);
+    }
+  }, [messages, currentUserId, chatId]);
+
   const initializeChat = async () => {
     try {
       // Get current user info from AsyncStorage
@@ -128,14 +135,28 @@ export default function ChatScreen() {
   };
 
   const setupRealtimeSubscription = () => {
+    if (!chatId) return;
+
+    console.log('Setting up realtime subscription for chat:', chatId);
+    
     // Subscribe to real-time message updates using ChatService
     const unsubscribe = ChatService.subscribeToChat(
       chatId as string,
       (newMessage: Message) => {
-        setMessages(prev => [...prev, newMessage]);
-        scrollToBottom();
+        console.log('New message received:', newMessage);
+        setMessages(prev => {
+          // Avoid duplicates
+          const exists = prev.some(msg => msg.id === newMessage.id);
+          if (exists) return prev;
+          
+          const updated = [...prev, newMessage];
+          // Auto-scroll to bottom when new message arrives
+          setTimeout(scrollToBottom, 100);
+          return updated;
+        });
       },
       (updatedMessage: Message) => {
+        console.log('Message updated:', updatedMessage);
         setMessages(prev => 
           prev.map(msg => 
             msg.id === updatedMessage.id ? updatedMessage : msg
@@ -143,8 +164,14 @@ export default function ChatScreen() {
         );
       },
       (typingStatus: TypingStatus) => {
+        console.log('Typing status:', typingStatus);
         if (typingStatus.userId !== currentUserId) {
           setIsTyping(typingStatus.isTyping);
+          
+          // Auto-clear typing after 5 seconds
+          if (typingStatus.isTyping) {
+            setTimeout(() => setIsTyping(false), 5000);
+          }
         }
       }
     );
@@ -158,6 +185,9 @@ export default function ChatScreen() {
     const messageText = newMessage.trim();
     setNewMessage('');
     
+    // Stop typing indicator
+    await ChatService.sendTypingIndicator(chatId as string, currentUserId, false);
+    
     try {
       // Send message using ChatService
       const sentMessage = await ChatService.sendMessage(
@@ -168,23 +198,36 @@ export default function ChatScreen() {
       );
 
       if (sentMessage) {
-        // Message will be added via real-time subscription
-        scrollToBottom();
+        // For mock/local messages, add immediately if not using realtime
+        // If using realtime, the message will be added via subscription
+        console.log('Message sent successfully:', sentMessage.id);
+        
+        // Ensure we scroll to bottom
+        setTimeout(scrollToBottom, 100);
       } else {
-        Alert.alert('Error', 'Failed to send message');
+        // If sending failed, restore message text
+        setNewMessage(messageText);
+        Alert.alert('Error', 'Failed to send message. Please try again.');
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      Alert.alert('Error', 'Failed to send message');
+      // Restore message text on error
+      setNewMessage(messageText);
+      Alert.alert('Error', 'Failed to send message. Please check your connection.');
     }
   };
 
   const handleTyping = async (text: string) => {
     setNewMessage(text);
     
-    // Send typing indicator
-    if (text.length > 0) {
+    // Send typing indicator when user starts typing
+    if (text.length > 0 && newMessage.length === 0) {
       await ChatService.sendTypingIndicator(chatId as string, currentUserId, true);
+    }
+    
+    // Send stop typing indicator when user clears the input
+    if (text.length === 0 && newMessage.length > 0) {
+      await ChatService.sendTypingIndicator(chatId as string, currentUserId, false);
     }
   };
 

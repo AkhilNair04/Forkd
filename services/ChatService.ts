@@ -198,29 +198,45 @@ export class ChatService {
     replyTo?: string
   ): Promise<Message | null> {
     try {
-      const messageData: Message = {
-        id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      const messageData = {
         chat_id: chatId,
         sender_id: senderId,
         sender_type: senderType,
         message,
         message_type: messageType,
-        timestamp: new Date().toISOString(),
         read: false,
         reply_to: replyTo,
       };
 
-      // In real app, save to Supabase
-      // const { data, error } = await supabase
-      //   .from('messages')
-      //   .insert(messageData)
-      //   .select()
-      //   .single();
+      // Save to Supabase - this will trigger realtime updates
+      const { data, error } = await supabase
+        .from('messages')
+        .insert(messageData)
+        .select()
+        .single();
 
-      // Mock implementation - save to AsyncStorage
-      const existingMessages = await this.getStoredMessages(chatId);
-      existingMessages.push(messageData);
-      await AsyncStorage.setItem(`messages-${chatId}`, JSON.stringify(existingMessages));
+      if (error) {
+        console.error('Supabase error sending message:', error);
+        
+        // Fallback to mock implementation
+        const fallbackMessage: Message = {
+          id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          chat_id: chatId,
+          sender_id: senderId,
+          sender_type: senderType,
+          message,
+          message_type: messageType,
+          timestamp: new Date().toISOString(),
+          read: false,
+          reply_to: replyTo,
+        };
+        
+        const existingMessages = await this.getStoredMessages(chatId);
+        existingMessages.push(fallbackMessage);
+        await AsyncStorage.setItem(`messages-${chatId}`, JSON.stringify(existingMessages));
+        
+        return fallbackMessage;
+      }
 
       // Update chat's last_message_at
       await this.updateChatTimestamp(chatId);
@@ -228,7 +244,7 @@ export class ChatService {
       // Send push notification to the other participant
       await this.sendMessageNotification(chatId, senderId, senderType, message);
 
-      return messageData;
+      return data as Message;
     } catch (error) {
       console.error('Error sending message:', error);
       return null;
@@ -244,22 +260,33 @@ export class ChatService {
     offset: number = 0
   ): Promise<Message[]> {
     try {
-      // In real app, query Supabase
-      // const { data, error } = await supabase
-      //   .from('messages')
-      //   .select('*')
-      //   .eq('chat_id', chatId)
-      //   .order('timestamp', { ascending: true })
-      //   .range(offset, offset + limit - 1);
+      // Try to get from Supabase first
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('chat_id', chatId)
+        .order('timestamp', { ascending: true })
+        .range(offset, offset + limit - 1);
 
-      // Mock implementation
+      if (!error && data) {
+        return data as Message[];
+      }
+
+      console.warn('Supabase query failed, using mock data:', error);
+      
+      // Fallback to mock implementation
       const messages = await this.getStoredMessages(chatId);
       return messages
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
         .slice(offset, offset + limit);
     } catch (error) {
       console.error('Error getting chat messages:', error);
-      return [];
+      
+      // Final fallback to mock data
+      const messages = await this.getStoredMessages(chatId);
+      return messages
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .slice(offset, offset + limit);
     }
   }
 
@@ -268,26 +295,37 @@ export class ChatService {
    */
   static async markMessagesAsRead(chatId: string, userId: string): Promise<void> {
     try {
-      // In real app, update Supabase
-      // await supabase
-      //   .from('messages')
-      //   .update({ read: true })
-      //   .eq('chat_id', chatId)
-      //   .neq('sender_id', userId);
+      // Update in Supabase
+      const { error } = await supabase
+        .from('messages')
+        .update({ read: true })
+        .eq('chat_id', chatId)
+        .neq('sender_id', userId);
 
-      // Mock implementation
+      if (error) {
+        console.warn('Supabase update failed, using local fallback:', error);
+        
+        // Fallback to mock implementation
+        const messages = await this.getStoredMessages(chatId);
+        const updatedMessages = messages.map(msg => 
+          msg.sender_id !== userId ? { ...msg, read: true } : msg
+        );
+        await AsyncStorage.setItem(`messages-${chatId}`, JSON.stringify(updatedMessages));
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+      
+      // Final fallback
       const messages = await this.getStoredMessages(chatId);
       const updatedMessages = messages.map(msg => 
         msg.sender_id !== userId ? { ...msg, read: true } : msg
       );
       await AsyncStorage.setItem(`messages-${chatId}`, JSON.stringify(updatedMessages));
-    } catch (error) {
-      console.error('Error marking messages as read:', error);
     }
   }
 
   /**
-   * Subscribe to real-time chat updates
+   * Subscribe to chat updates using polling + channels for typing
    */
   static subscribeToChat(
     chatId: string,
@@ -296,38 +334,41 @@ export class ChatService {
     onTyping: (typing: TypingStatus) => void
   ): () => void {
     try {
-      // Subscribe to new messages
-      const messagesChannel = supabase
-        .channel(`chat-messages-${chatId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `chat_id=eq.${chatId}`,
-          },
-          (payload) => {
-            const newMessage = payload.new as Message;
-            onNewMessage(newMessage);
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'messages',
-            filter: `chat_id=eq.${chatId}`,
-          },
-          (payload) => {
-            const updatedMessage = payload.new as Message;
-            onMessageUpdate(updatedMessage);
-          }
-        )
-        .subscribe();
+      let isActive = true;
+      let lastMessageTimestamp = new Date().toISOString();
+      
+      // Set up polling for new messages
+      const pollMessages = async () => {
+        if (!isActive) return;
+        
+        try {
+          const { data, error } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('chat_id', chatId)
+            .gt('timestamp', lastMessageTimestamp)
+            .order('timestamp', { ascending: true });
 
-      // Subscribe to typing indicators
+          if (!error && data && data.length > 0) {
+            data.forEach((message: Message) => {
+              onNewMessage(message);
+              lastMessageTimestamp = message.timestamp;
+            });
+          }
+        } catch (error) {
+          console.warn('Polling error, will retry:', error);
+        }
+        
+        // Poll every 2 seconds when active
+        if (isActive) {
+          setTimeout(pollMessages, 2000);
+        }
+      };
+
+      // Start polling after a short delay
+      setTimeout(pollMessages, 1000);
+
+      // Subscribe to typing indicators using channels (this works without replication)
       const typingChannel = supabase
         .channel(`typing-${chatId}`)
         .on('broadcast', { event: 'typing' }, (payload) => {
@@ -335,12 +376,12 @@ export class ChatService {
         })
         .subscribe();
 
-      // Store subscriptions for cleanup
-      this.activeSubscriptions[chatId] = { messagesChannel, typingChannel };
+      // Store subscription for cleanup
+      this.activeSubscriptions[chatId] = { typingChannel };
 
       // Return cleanup function
       return () => {
-        messagesChannel.unsubscribe();
+        isActive = false;
         typingChannel.unsubscribe();
         delete this.activeSubscriptions[chatId];
       };
@@ -359,7 +400,14 @@ export class ChatService {
     isTyping: boolean
   ): Promise<void> {
     try {
-      const channel = supabase.channel(`typing-${chatId}`);
+      // Get or create the typing channel
+      const channelName = `typing-${chatId}`;
+      let channel = supabase.getChannels().find(ch => ch.topic === channelName);
+      
+      if (!channel) {
+        channel = supabase.channel(channelName);
+        await channel.subscribe();
+      }
       
       await channel.send({
         type: 'broadcast',
@@ -380,6 +428,12 @@ export class ChatService {
         this.typingTimeouts[`${chatId}-${userId}`] = setTimeout(() => {
           this.sendTypingIndicator(chatId, userId, false);
         }, 3000);
+      } else {
+        // Clear timeout if manually stopping typing
+        if (this.typingTimeouts[`${chatId}-${userId}`]) {
+          clearTimeout(this.typingTimeouts[`${chatId}-${userId}`]);
+          delete this.typingTimeouts[`${chatId}-${userId}`];
+        }
       }
     } catch (error) {
       console.error('Error sending typing indicator:', error);
