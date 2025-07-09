@@ -1,5 +1,10 @@
+import ItemCard from "@/components/ItemCard";
 import { fetchFavoriteChefs } from "@/constants/fetchFavoriteChefs";
 import { fetchFavoriteDishes } from "@/constants/fetchFavoriteDishes";
+import {
+  toggleFavoriteChef,
+  toggleFavoriteDish,
+} from "@/constants/updateFavorites";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
@@ -13,30 +18,22 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import ItemCard from "@/components/ItemCard";
-import { toggleFavoriteChef, toggleFavoriteDish } from "@/constants/updateFavorites";
 
 export default function FavoritesScreen() {
   const [selectedTab, setSelectedTab] = useState<"Dish" | "Chef">("Dish");
 
   const userId = "1"; // 🔐 Replace with dynamic logic when auth is set
 
-const {
-  data: favoriteChefs = [],
-  refetch: refetchFavoriteChefs,
-} = useQuery({
-  queryKey: ["favoriteChefs", userId],
-  queryFn: () => fetchFavoriteChefs(userId),
-});
+  const { data: favoriteChefs = [], refetch: refetchFavoriteChefs } = useQuery({
+    queryKey: ["favoriteChefs", userId],
+    queryFn: () => fetchFavoriteChefs(userId),
+  });
 
-const {
-  data: favoriteDishes = [],
-  refetch: refetchFavoriteDishes,
-} = useQuery({
-  queryKey: ["favoriteDishes", userId],
-  queryFn: () => fetchFavoriteDishes(userId),
-});
-
+  const { data: favoriteDishes = [], refetch: refetchFavoriteDishes } =
+    useQuery({
+      queryKey: ["favoriteDishes", userId],
+      queryFn: () => fetchFavoriteDishes(userId),
+    });
 
   // Transform data into uniform structure for ItemCard
   const transformedChefs = favoriteChefs.map((chef: any) => ({
@@ -61,7 +58,10 @@ const {
 
       {/* Header */}
       <View style={styles.headerContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
           <Ionicons name="chevron-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Favourites</Text>
@@ -75,7 +75,12 @@ const {
             onPress={() => setSelectedTab(tab as "Dish" | "Chef")}
             style={styles.tabButton}
           >
-            <Text style={[styles.tabText, selectedTab === tab && styles.tabTextActive]}>
+            <Text
+              style={[
+                styles.tabText,
+                selectedTab === tab && styles.tabTextActive,
+              ]}
+            >
               {tab}
             </Text>
             {selectedTab === tab && <View style={styles.activeLine} />}
@@ -85,38 +90,49 @@ const {
 
       {/* FlatList View */}
       <FlatList
-  key={selectedTab}
-  data={selectedTab === "Dish" ? transformedDishes : transformedChefs}
-  keyExtractor={(item) => item.id}
-  renderItem={({ item }) => {
-    const isFav =
-      selectedTab === "Dish"
-        ? favoriteDishes.some((d) => d.id === item.id)
-        : favoriteChefs.some((c) => c.id === item.id);
+        key={selectedTab}
+        data={selectedTab === "Dish" ? transformedDishes : transformedChefs}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => {
+          const isFav =
+            selectedTab === "Dish"
+              ? favoriteDishes.some((d) => d.id === item.id)
+              : favoriteChefs.some((c) => c.id === item.id);
 
-    return (
-      <ItemCard
-        item={item}
-        isFavorite={isFav}
-        type={selectedTab.toLowerCase() as "dish" | "chef"}
-        onArrowPress={() => {}}
-        onToggleDone={async () => {
-          if (selectedTab === "Dish") {
-            await toggleFavoriteDish(userId, item.id, isFav);
-            await refetchFavoriteDishes();
-          } else {
-            await toggleFavoriteChef(userId, item.id, isFav);
-            await refetchFavoriteChefs();
-          }
+          return (
+            <ItemCard
+              item={item}
+              isFavorite={isFav}
+              type={selectedTab.toLowerCase() as "dish" | "chef"}
+              onArrowPress={() => {
+                if (selectedTab === "Dish") {
+                  router.push({
+                    pathname: "/dish-details/[dishId]",
+                    params: { dishId: item.id },
+                  });
+                } else {
+                  router.push({
+                    pathname: "/chef-details/[chefId]",
+                    params: { chefId: item.id },
+                  });
+                }
+              }}
+              onToggleDone={async () => {
+                if (selectedTab === "Dish") {
+                  await toggleFavoriteDish(userId, item.id, isFav);
+                  await refetchFavoriteDishes();
+                } else {
+                  await toggleFavoriteChef(userId, item.id, isFav);
+                  await refetchFavoriteChefs();
+                }
+              }}
+            />
+          );
         }}
+        numColumns={2}
+        columnWrapperStyle={{ justifyContent: "space-between" }}
+        contentContainerStyle={{ padding: 16 }}
       />
-    );
-  }}
-  numColumns={2}
-  columnWrapperStyle={{ justifyContent: "space-between" }}
-  contentContainerStyle={{ padding: 16 }}
-/>
-
     </SafeAreaView>
   );
 }

@@ -33,7 +33,7 @@ export default function DishScreen() {
     queryFn: fetchDishes,
   });
 
-  const { data: favoriteDishes = [], refetch: refetchFavoriteDishes } =
+  const { data: favoriteDishes = [] } =
     useQuery({
       queryKey: ["favoriteDishes", userId],
       queryFn: () => fetchFavoriteDishes(userId),
@@ -46,11 +46,35 @@ export default function DishScreen() {
     });
   };
 
-  const filteredDishes: Dish[] = dishes.filter(
-    (dish) =>
-      dish.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (dish as any).cuisine?.toLowerCase()?.includes(searchQuery.toLowerCase())
-  );
+  const filteredDishes: Dish[] = dishes.filter((dish) => {
+  const title = dish.title?.toLowerCase() ?? "";
+  const cuisine = (dish as any).cuisine?.toLowerCase() ?? "";
+  const dishTags = (dish.tags || []).map((t: string) => t.toLowerCase());
+  
+  const dishAllergies = (dish.allergies || []).map((a: string) => a.toLowerCase());
+
+  const matchesSearch =
+    title.includes(searchQuery.toLowerCase()) ||
+    cuisine.includes(searchQuery.toLowerCase());
+
+  const matchesCuisine =
+    selectedCuisines.length === 0 ||
+    selectedCuisines.includes((dish as any).cuisine);
+ const matchesDietary =
+    selectedDietary.length === 0 ||
+    selectedDietary.some((pref) =>
+      dishTags.includes(pref.toLowerCase())
+    );
+
+  const excludesAllergies =
+    selectedAllergies.length === 0 ||
+    !selectedAllergies.some((allergy) =>
+      dishAllergies.includes(allergy.toLowerCase())
+    );
+
+  return matchesSearch && matchesCuisine && matchesDietary && excludesAllergies;
+});
+
 
   const filterSections = [
     {
