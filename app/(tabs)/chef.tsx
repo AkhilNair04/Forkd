@@ -34,7 +34,7 @@ export default function ChefScreen() {
     queryFn: fetchChefs,
   });
 
-  const { data: favoriteChefs = [], refetch: refetchFavoriteChefs } = useQuery({
+  const { data: favoriteChefs = []} = useQuery({
     queryKey: ["favoriteChefs", userId],
     queryFn: () => fetchFavoriteChefs(userId),
   });

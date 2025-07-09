@@ -1,4 +1,4 @@
-// app/(chefTabs)/_layout.tsx
+// app/(tabs-chef)/_layout.tsx
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
