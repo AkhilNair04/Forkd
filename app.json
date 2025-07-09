@@ -37,7 +37,15 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "viewport": {
+        "width": "device-width",
+        "initialScale": 1.0,
+        "maximumScale": 1.0,
+        "userScalable": false,
+        "shrinkToFit": false,
+        "viewportFit": "cover"
+      }
     },
     "plugins": [
       "expo-router",

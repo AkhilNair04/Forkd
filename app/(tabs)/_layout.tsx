@@ -17,8 +17,8 @@ export default function TabLayout() {
           position: 'absolute',
           bottom: 0,
           width: '100%',
-          left: 20,
-          right: 20,
+          left: 0,
+          right: 0,
           elevation: 10,
           backgroundColor: '#2c2c2c', // dark background
           borderTopLeftRadius: 25,
@@ -32,6 +32,7 @@ export default function TabLayout() {
             height: 5,
           },
           shadowRadius: 10,
+          paddingHorizontal: 20,
         },
         tabBarItemStyle: {
           marginTop: 10,

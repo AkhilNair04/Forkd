@@ -2,12 +2,15 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
+  Dimensions,
   ImageBackground,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+
+const { width, height } = Dimensions.get('window');
 
 const WelcomeScreen: React.FC = () => {
   const router = useRouter();
@@ -46,45 +49,55 @@ const WelcomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+    height: '100%',
   },
   image: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     resizeMode: "cover",
     justifyContent: "flex-end",
   },
   fadeBox: {
     padding: 30,
+    paddingBottom: 50,
     justifyContent: "center",
     alignItems: "center",
+    minHeight: height * 0.4,
   },
   textContainer: {
     alignItems: "center",
     width: "100%",
+    maxWidth: width * 0.9,
     backgroundColor: "rgba(0, 0, 0, 0.4)",
     borderRadius: 10,
     padding: 20,
   },
   welcomeText: {
-    fontSize: 28,
+    fontSize: Math.min(28, width * 0.07),
     color: "white",
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 10,
   },
   descriptionText: {
-    fontSize: 16,
+    fontSize: Math.min(16, width * 0.04),
     color: "white",
     textAlign: "center",
     marginBottom: 20,
+    lineHeight: 22,
   },
   button: {
     backgroundColor: "#D4A373",
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 8,
+    minWidth: width * 0.4,
+    alignItems: 'center',
   },
   buttonText: {
-    fontSize: 18,
+    fontSize: Math.min(18, width * 0.045),
     color: "white",
     fontWeight: "bold",
   },
