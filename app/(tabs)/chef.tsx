@@ -34,20 +34,47 @@ export default function ChefScreen() {
     queryFn: fetchChefs,
   });
 
-  const { data: favoriteChefs = []} = useQuery({
+  const { data: favoriteChefs = [] } = useQuery({
     queryKey: ["favoriteChefs", userId],
     queryFn: () => fetchFavoriteChefs(userId),
   });
 
   const filteredChefs = chefs.filter((chef) => {
-  const name = chef.name?.toLowerCase() ?? "";
-  const cuisine = chef.cuisine?.toLowerCase() ?? "";
-  return (
-    name.includes(searchQuery.toLowerCase()) ||
-    cuisine.includes(searchQuery.toLowerCase())
-  );
-});
+    const name = chef.name?.toLowerCase() ?? "";
+    const cuisine = chef.cuisine?.toLowerCase() ?? "";
+    const specialties = (chef.specialties || []).map((s: string) =>
+      s.toLowerCase()
+    );
+    const experience = chef.experience_level ?? ""; // add if not already present
+    const services = (chef.service_type || []).map((s: string) =>
+      s.toLowerCase()
+    ); // this is now an array
 
+    const matchesSearch =
+      name.includes(searchQuery.toLowerCase()) ||
+      cuisine.includes(searchQuery.toLowerCase());
+
+    const matchesExperience =
+      selectedExperience.length === 0 ||
+      selectedExperience.includes(experience);
+
+    const matchesSpecialties =
+      selectedSpecialties.length === 0 ||
+      selectedSpecialties.some((specialty) =>
+        specialties.includes(specialty.toLowerCase())
+      );
+
+    const matchesServices =
+      selectedServices.length === 0 ||
+      selectedServices.some((s) => services.includes(s.toLowerCase()));
+
+    return (
+      matchesSearch &&
+      matchesExperience &&
+      matchesSpecialties &&
+      matchesServices
+    );
+  });
 
   const handleToggleFavorite = async (id: string, isCurrentlyFav: boolean) => {
     await toggleFavoriteChef(userId, id, isCurrentlyFav);
@@ -71,7 +98,7 @@ export default function ChefScreen() {
     },
     {
       label: "Service Type",
-      options: ["Home Cook", "Event Catering", "Meal Plan"],
+      options: ["Home Cook", "Event Catering"],
       selected: selectedServices,
       setSelected: setSelectedServices,
     },
