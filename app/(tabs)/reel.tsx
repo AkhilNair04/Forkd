@@ -15,8 +15,6 @@ import {
 import { useCart } from '../../context/CartContext';
 import { getCurrentUserProfile } from '../../lib/supabase';
 
-const { width, height } = Dimensions.get('window');
-
 interface Reel {
   id: string;
   videoUrl: string;
@@ -126,10 +124,18 @@ export default function ReelScreen() {
   const [reels, setReels] = useState<Reel[]>(mockReels);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [screenData, setScreenData] = useState(Dimensions.get('window'));
   const { addToCart } = useCart();
 
   useEffect(() => {
     loadUserProfile();
+    
+    // Listen for dimension changes
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenData(window);
+    });
+
+    return () => subscription?.remove();
   }, []);
 
   const loadUserProfile = async () => {
@@ -203,7 +209,7 @@ export default function ReelScreen() {
   };
 
   const renderReelItem = ({ item, index }: { item: Reel; index: number }) => (
-    <View style={styles.reelContainer}>
+    <View style={[styles.reelContainer, { width: screenData.width, height: screenData.height }]}>
       {/* Background Image */}
       <Image 
         source={{ uri: item.thumbnail }} 
@@ -339,7 +345,7 @@ export default function ReelScreen() {
           keyExtractor={(item) => item.id}
           pagingEnabled={true}
           showsVerticalScrollIndicator={false}
-          snapToInterval={height}
+          snapToInterval={screenData.height}
           snapToAlignment="start"
           decelerationRate="fast"
           scrollEventThrottle={16}
@@ -348,12 +354,12 @@ export default function ReelScreen() {
           initialNumToRender={1}
           windowSize={5}
           getItemLayout={(data, index) => ({
-            length: height,
-            offset: height * index,
+            length: screenData.height,
+            offset: screenData.height * index,
             index,
           })}
           onMomentumScrollEnd={(event) => {
-            const index = Math.round(event.nativeEvent.contentOffset.y / height);
+            const index = Math.round(event.nativeEvent.contentOffset.y / screenData.height);
             setCurrentIndex(index);
           }}
           onViewableItemsChanged={onViewableItemsChanged}
@@ -370,8 +376,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   reelContainer: {
-    width: width,
-    height: height,
     position: 'relative',
   },
   backgroundImage: {
