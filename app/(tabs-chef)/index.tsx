@@ -1,3 +1,4 @@
+import { RestrictedTabWrapper } from "@/components/RestrictedTabWrapper";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {
@@ -14,113 +15,115 @@ export default function ProfileScreen() {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
-    <View style={styles.pageContainer}>
-      {/* Top Bar: Location & Chat */}
-      <View style={styles.topRow}>
-        <View>
-          <Text
-            style={[
-              styles.locationLabel,
-              { fontSize: 32, textAlign: "center", width: "100%" },
-            ]}
-          >
-            Home.
-          </Text>
-        </View>
-        <View style={styles.chatIconWrapper}>
-          <Ionicons name="chatbubble-ellipses" size={28} color="#fff" />
-          <View style={styles.chatBadge}>
-            <Text style={styles.chatBadgeText}>2</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Open/Closed Toggle */}
-      <View style={styles.toggleRow}>
-        <TouchableOpacity
-          style={[styles.toggleButton, isOpen ? styles.open : styles.closed]}
-          onPress={() => setIsOpen((prev) => !prev)}
-        >
-          <Text
-            style={[
-              styles.toggleButtonText,
-              isOpen ? styles.openText : styles.closedText,
-            ]}
-          >
-            {isOpen ? "Open" : "Closed"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Stat Cards */}
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>02</Text>
-          <Text style={styles.statLabel}>RUNNING ORDERS</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>05</Text>
-          <Text style={styles.statLabel}>BOOKINGS</Text>
-        </View>
-      </View>
-
-      {/* Revenue Card */}
-      <View style={styles.revenueCard}>
-        <View style={styles.revenueHeader}>
+    <RestrictedTabWrapper>
+      <View style={styles.pageContainer}>
+        {/* Top Bar: Location & Chat */}
+        <View style={styles.topRow}>
           <View>
-            <Text style={styles.revenueLabel}>Total Revenue</Text>
-            <Text style={styles.revenueValue}>Rs. 2470</Text>
+            <Text
+              style={[
+                styles.locationLabel,
+                { fontSize: 32, textAlign: "center", width: "100%" },
+              ]}
+            >
+              Home.
+            </Text>
           </View>
-          <TouchableOpacity>
-            <Text style={styles.revenueDetails}>See Details</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.revenueChartRow}>
-          <View style={styles.revenueChartPlaceholder}>
-            {/* Placeholder for chart */}
-            <Text style={styles.chartText}>[Chart]</Text>
+          <View style={styles.chatIconWrapper}>
+            <Ionicons name="chatbubble-ellipses" size={28} color="#fff" />
+            <View style={styles.chatBadge}>
+              <Text style={styles.chatBadgeText}>2</Text>
+            </View>
           </View>
-          <TouchableOpacity style={styles.revenueDropdown}>
-            <Text style={styles.revenueDropdownText}>Daily</Text>
-            <Ionicons name="chevron-down" size={16} color="#888" />
-          </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Reviews Card */}
-      <View style={styles.reviewsCard}>
-        <View style={styles.reviewsHeader}>
-          <Text style={styles.reviewsLabel}>Reviews</Text>
-          <TouchableOpacity>
-            <Text style={styles.reviewsDetails}>See All Reviews</Text>
+        {/* Open/Closed Toggle */}
+        <View style={styles.toggleRow}>
+          <TouchableOpacity
+            style={[styles.toggleButton, isOpen ? styles.open : styles.closed]}
+            onPress={() => setIsOpen((prev) => !prev)}
+          >
+            <Text
+              style={[
+                styles.toggleButtonText,
+                isOpen ? styles.openText : styles.closedText,
+              ]}
+            >
+              {isOpen ? "Open" : "Closed"}
+            </Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.reviewsRow}>
-          <Ionicons
-            name="star"
-            size={20}
-            color="#C67C4E"
-            style={{ marginRight: 4 }}
-          />
-          <Text style={styles.reviewsRating}>4.9</Text>
-          <Text style={styles.reviewsTotal}> Total 20 Reviews</Text>
-        </View>
-      </View>
 
-      {/* Popular Items Card */}
-      <View style={styles.popularCard}>
-        <View style={styles.popularHeader}>
-          <Text style={styles.popularLabel}>Popular Items This Weeks</Text>
-          <TouchableOpacity>
-            <Text style={styles.popularDetails}>See All</Text>
-          </TouchableOpacity>
+        {/* Stat Cards */}
+        <View style={styles.statsRow}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>02</Text>
+            <Text style={styles.statLabel}>RUNNING ORDERS</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>05</Text>
+            <Text style={styles.statLabel}>BOOKINGS</Text>
+          </View>
         </View>
-        <View style={styles.popularItemsRow}>
-          <View style={styles.popularItemPlaceholder} />
-          <View style={styles.popularItemPlaceholder} />
+
+        {/* Revenue Card */}
+        <View style={styles.revenueCard}>
+          <View style={styles.revenueHeader}>
+            <View>
+              <Text style={styles.revenueLabel}>Total Revenue</Text>
+              <Text style={styles.revenueValue}>Rs. 2470</Text>
+            </View>
+            <TouchableOpacity>
+              <Text style={styles.revenueDetails}>See Details</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.revenueChartRow}>
+            <View style={styles.revenueChartPlaceholder}>
+              {/* Placeholder for chart */}
+              <Text style={styles.chartText}>[Chart]</Text>
+            </View>
+            <TouchableOpacity style={styles.revenueDropdown}>
+              <Text style={styles.revenueDropdownText}>Daily</Text>
+              <Ionicons name="chevron-down" size={16} color="#888" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Reviews Card */}
+        <View style={styles.reviewsCard}>
+          <View style={styles.reviewsHeader}>
+            <Text style={styles.reviewsLabel}>Reviews</Text>
+            <TouchableOpacity>
+              <Text style={styles.reviewsDetails}>See All Reviews</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.reviewsRow}>
+            <Ionicons
+              name="star"
+              size={20}
+              color="#C67C4E"
+              style={{ marginRight: 4 }}
+            />
+            <Text style={styles.reviewsRating}>4.9</Text>
+            <Text style={styles.reviewsTotal}> Total 20 Reviews</Text>
+          </View>
+        </View>
+
+        {/* Popular Items Card */}
+        <View style={styles.popularCard}>
+          <View style={styles.popularHeader}>
+            <Text style={styles.popularLabel}>Popular Items This Weeks</Text>
+            <TouchableOpacity>
+              <Text style={styles.popularDetails}>See All</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.popularItemsRow}>
+            <View style={styles.popularItemPlaceholder} />
+            <View style={styles.popularItemPlaceholder} />
+          </View>
         </View>
       </View>
-    </View>
+    </RestrictedTabWrapper>
   );
 }
 

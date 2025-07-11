@@ -1,7 +1,8 @@
+import { RestrictedTabWrapper } from "@/components/RestrictedTabWrapper";
 import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   FlatList,
@@ -169,88 +170,98 @@ export default function ChefReelsPage() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <View style={styles.root}>
-        {/* Profile Section */}
-        <View style={styles.profileTop}>
-          <Image source={{ uri: CHEF_PROFILE.avatar }} style={styles.avatar} />
-          <TouchableOpacity style={styles.editBtn}>
-            <Text style={styles.editText}>EDIT</Text>
-          </TouchableOpacity>
-          <Text style={styles.name}>
-            {CHEF_PROFILE.name}{" "}
-            <Ionicons name="checkmark-circle" size={19} color="#FF934F" />
-          </Text>
-          <Text style={styles.specialty}>
-            <Text style={{ fontWeight: "bold" }}>Specialty:</Text>{" "}
-            {CHEF_PROFILE.specialty}
-          </Text>
-          <View style={styles.ratingRow}>
-            <Ionicons name="star" size={20} color="#FF934F" />
-            <Text style={styles.ratingText}>{CHEF_PROFILE.rating}</Text>
+    <RestrictedTabWrapper>
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        <View style={styles.root}>
+          {/* Profile Section */}
+          <View style={styles.profileTop}>
+            <Image
+              source={{ uri: CHEF_PROFILE.avatar }}
+              style={styles.avatar}
+            />
+            <TouchableOpacity style={styles.editBtn}>
+              <Text style={styles.editText}>EDIT</Text>
+            </TouchableOpacity>
+            <Text style={styles.name}>
+              {CHEF_PROFILE.name}{" "}
+              <Ionicons name="checkmark-circle" size={19} color="#FF934F" />
+            </Text>
+            <Text style={styles.specialty}>
+              <Text style={{ fontWeight: "bold" }}>Specialty:</Text>{" "}
+              {CHEF_PROFILE.specialty}
+            </Text>
+            <View style={styles.ratingRow}>
+              <Ionicons name="star" size={20} color="#FF934F" />
+              <Text style={styles.ratingText}>{CHEF_PROFILE.rating}</Text>
+            </View>
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statNumber}>{CHEF_PROFILE.followers}</Text>
+                <Text style={styles.statLabel}>Followers</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statNumber}>{CHEF_PROFILE.posts}</Text>
+                <Text style={styles.statLabel}>Posts</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statNumber}>{CHEF_PROFILE.likes}</Text>
+                <Text style={styles.statLabel}>Likes</Text>
+              </View>
+            </View>
           </View>
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{CHEF_PROFILE.followers}</Text>
-              <Text style={styles.statLabel}>Followers</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{CHEF_PROFILE.posts}</Text>
-              <Text style={styles.statLabel}>Posts</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{CHEF_PROFILE.likes}</Text>
-              <Text style={styles.statLabel}>Likes</Text>
-            </View>
-          </View>
-        </View>
-        {/* Grid */}
-        <FlatList
-          data={gridData}
-          renderItem={renderGridItem}
-          keyExtractor={(_, i) => i.toString()}
-          numColumns={3}
-          contentContainerStyle={styles.gridContainer}
-          showsVerticalScrollIndicator={false}
-        />
 
-        {/* Media Selection Modal */}
-        <Modal
-          visible={showMediaModal}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setShowMediaModal(false)}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setShowMediaModal(false)}
+          {/* Grid Section */}
+          <FlatList
+            data={gridData}
+            renderItem={renderGridItem}
+            keyExtractor={(item, index) => index.toString()}
+            numColumns={3}
+            contentContainerStyle={styles.gridContainer}
+            showsVerticalScrollIndicator={false}
+          />
+
+          {/* Media Modal */}
+          <Modal
+            visible={showMediaModal}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setShowMediaModal(false)}
           >
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Add New Reel</Text>
-
-              <TouchableOpacity
-                style={styles.modalOption}
-                onPress={() => pickVideo("library")}
-                disabled={uploading}
-              >
-                <Ionicons name="videocam" size={24} color="#FF934F" />
-                <Text style={styles.modalOptionText}>
-                  {uploading ? "Uploading..." : "Choose Video from Gallery"}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setShowMediaModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Add New Reel</Text>
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={() => pickVideo("camera")}
+                  disabled={uploading}
+                >
+                  <Ionicons name="camera" size={24} color="#FF934F" />
+                  <Text style={styles.modalOptionText}>
+                    {uploading ? "Uploading..." : "Record Video"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={() => pickVideo("library")}
+                  disabled={uploading}
+                >
+                  <Ionicons name="videocam" size={24} color="#FF934F" />
+                  <Text style={styles.modalOptionText}>
+                    {uploading ? "Uploading..." : "Choose Video from Gallery"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setShowMediaModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </TouchableOpacity>
-        </Modal>
-      </View>
-    </SafeAreaView>
+          </Modal>
+        </View>
+      </SafeAreaView>
+    </RestrictedTabWrapper>
   );
 }
 
