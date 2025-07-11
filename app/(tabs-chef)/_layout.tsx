@@ -38,11 +38,11 @@ export default function ChefTabsLayout() {
       {/* Home */}
       <Tabs.Screen
         name="index"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="home" size={28} color={color} />
-          ),
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+            router.push("./home");
+          },
         }}
       />
 
