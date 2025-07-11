@@ -1,7 +1,6 @@
-import { getCurrentUserProfile, supabase, updateUserAvatar, updateUserProfile, uploadAvatar } from '@/lib/supabase';
+import { supabase } from '@/constants/supabase';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -43,16 +42,6 @@ export default function ProfileScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-
-  // Profile completion form data
-  const [profileForm, setProfileForm] = useState({
-    full_name: "",
-    location: "",
-    user_type: "customer",
-    bio: "",
-  });
-
   const [userProfile, setUserProfile] = useState<UserProfile>({
     name: '',
     email: '',
@@ -71,14 +60,15 @@ export default function ProfileScreen() {
     totalSpent: 0,
   });
 
+  // Load profile and stats when component mounts
   useEffect(() => {
     loadUserProfile();
     loadUserStats();
   }, []);
 
+  // Fetch user stats from AsyncStorage or calculate defaults if no data exists
   const loadUserStats = async () => {
     try {
-      // Load from AsyncStorage or calculate from existing data
       const orderHistory = await AsyncStorage.getItem('orderHistory');
       const favoriteChefs = await AsyncStorage.getItem('favoriteChefs');
       const savedDishes = await AsyncStorage.getItem('favoriteDishes');
@@ -106,7 +96,6 @@ export default function ProfileScreen() {
         stats.savedDishes = dishes.length;
       }
 
-      // If no real data, use some demo values
       if (stats.totalOrders === 0) {
         stats = {
           totalOrders: 12,
@@ -122,57 +111,51 @@ export default function ProfileScreen() {
     }
   };
 
+  // Fetch user profile from Supabase Auth and user_profiles table
   const loadUserProfile = async () => {
     try {
-      // Get the authenticated user data from Supabase Auth
       const { data, error } = await supabase.auth.getUser();
+
       if (error) {
         console.error("Error fetching user:", error.message);
         return;
       }
-      const user = data?.user; // user data
 
+      const user = data?.user;
       if (!user) {
         console.error("No user logged in");
         return;
       }
 
-      // Store the user data in AsyncStorage
-      await AsyncStorage.setItem("user", JSON.stringify(user));
+      console.log("Fetched User from Supabase Auth:", user);
 
-      // Fetch the user profile from the database using the user_id (same as user.id)
+      // Fetch the user profile from the database using the user_id
       const { data: profileData, error: profileError } = await supabase
         .from("user_profiles")
         .select("*")
         .eq("user_id", user.id) // Use the user.id to fetch the profile
-        .single(); // Fetch a single profile since user_id is unique
+        .single();
 
       if (profileError) {
         console.error("Error fetching user profile:", profileError);
         return;
       }
 
-      // Set the user profile state
-      if (profileData) {
-        setUserProfile({
-          name: profileData.full_name || "No Name",
-          email: user.email || "", // Default empty string if no email
-          phone: profileData.phone || "", // Default empty string if no phone
-          userType: profileData.user_type || "customer",
-          avatar: profileData.avatar_url || "", // Default empty string if no avatar
-          location: profileData.location || "Unknown",
-          joinDate: profileData.created_at
-            ? new Date(profileData.created_at).toLocaleDateString()
-            : "N/A", // Default value if no joinDate
-          bio: profileData.bio || "",
-        });
-        setProfileForm({
-          full_name: profileData.full_name || "",
-          location: profileData.location || "",
-          user_type: profileData.user_type || "customer",
-          bio: profileData.bio || "",
-        });
-      }
+      console.log("Fetched Profile Data:", profileData);
+
+      setUserProfile({
+        name: profileData?.full_name || "No Name",
+        email: user.email || "", 
+        phone: profileData?.phone || "",
+        userType: profileData?.user_type || "customer",
+        avatar: profileData?.avatar_url || "",
+        location: profileData?.location || "Unknown",
+        joinDate: profileData?.created_at
+          ? new Date(profileData.created_at).toLocaleDateString()
+          : "N/A",
+        bio: profileData?.bio || "",
+      });
+
     } catch (error) {
       console.error("Error loading profile:", error);
     } finally {
@@ -180,18 +163,10 @@ export default function ProfileScreen() {
     }
   };
 
+  // Handle user logout
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      await AsyncStorage.multiRemove([
-        "isLoggedIn",
-        "userProfile",
-        "userId",
-        "userType",
-        "phoneForOTP",
-        "expoPushToken",
-        "user",
-      ]);
       router.replace("/(auth)/welcome-screen");
     } catch (error) {
       console.error("Error during logout:", error);
@@ -199,13 +174,14 @@ export default function ProfileScreen() {
     }
   };
 
+  // Save profile changes to Supabase
   const handleSaveProfile = async () => {
-    if (!profileForm.full_name.trim()) {
+    if (!userProfile.name.trim()) {
       Alert.alert('Missing Information', 'Please enter your name');
       return;
     }
 
-    if (!profileForm.location) {
+    if (!userProfile.location) {
       Alert.alert('Missing Information', 'Please select your location');
       return;
     }
@@ -214,13 +190,12 @@ export default function ProfileScreen() {
     try {
       const updatedProfile = {
         ...userProfile,
-        name: profileForm.full_name,
-        location: profileForm.location,
-        userType: profileForm.user_type as "customer" | "chef",
-        bio: profileForm.bio,
+        name: userProfile.name,
+        location: userProfile.location,
+        userType: userProfile.userType as "customer" | "chef",
+        bio: userProfile.bio,
       };
 
-      await AsyncStorage.setItem("userProfile", JSON.stringify(updatedProfile));
       setUserProfile(updatedProfile);
 
       setShowProfileModal(false);
@@ -234,10 +209,12 @@ export default function ProfileScreen() {
     }
   };
 
+  // Logout confirmation modal
   const handleLogoutWithConfirmation = () => {
     setShowLogoutModal(true);
   };
 
+  // Stats Card Component
   const StatCard = ({ icon, value, label }: { icon: string; value: string | number; label: string }) => (
     <View style={styles.statCard}>
       <Ionicons name={icon as any} size={24} color="#C67C4E" />
@@ -246,6 +223,7 @@ export default function ProfileScreen() {
     </View>
   );
 
+  // Menu Option Component
   const MenuOption = ({
     icon,
     title,
@@ -376,22 +354,22 @@ export default function ProfileScreen() {
                 style={styles.input}
                 placeholder="Full Name"
                 placeholderTextColor="#666"
-                value={profileForm.full_name}
-                onChangeText={(text) => setProfileForm({ ...profileForm, full_name: text })}
+                value={userProfile.name}
+                onChangeText={(text) => setUserProfile({ ...userProfile, name: text })}
               />
               <TextInput
                 style={styles.input}
                 placeholder="Location"
                 placeholderTextColor="#666"
-                value={profileForm.location}
-                onChangeText={(text) => setProfileForm({ ...profileForm, location: text })}
+                value={userProfile.location}
+                onChangeText={(text) => setUserProfile({ ...userProfile, location: text })}
               />
               <TextInput
                 style={styles.input}
                 placeholder="Bio"
                 placeholderTextColor="#666"
-                value={profileForm.bio}
-                onChangeText={(text) => setProfileForm({ ...profileForm, bio: text })}
+                value={userProfile.bio}
+                onChangeText={(text) => setUserProfile({ ...userProfile, bio: text })}
                 multiline
                 numberOfLines={3}
               />
@@ -415,7 +393,6 @@ export default function ProfileScreen() {
     </>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
