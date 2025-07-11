@@ -68,7 +68,7 @@ export default function HomeScreen() {
   const { location } = useLocation();
 
   // Use dynamic address from location hook
-  const selectedAddress = location?.address || '1234 Culinary Street, Flavor...';
+  const selectedAddress = location?.address || 'Pick your location';
 
   useEffect(() => {
     loadUserProfile();

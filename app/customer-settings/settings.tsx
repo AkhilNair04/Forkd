@@ -47,6 +47,14 @@ const Settings: React.FC = () => {
         <SettingsItem
           title="Support & Feedback"
           onPress={() => router.push("/customer-settings/support")}
+        />
+        <SettingsItem
+          title="Referrals & Rewards"
+          onPress={() => router.push("/customer-settings/referrals")}
+        />
+        <SettingsItem
+          title="My Rewards"
+          onPress={() => router.push("/customer-settings/rewards")}
           isLast
         />
       </View>

@@ -24,7 +24,7 @@ export default function DishScreen() {
   const userId = "1"; // 🔐 Replace with auth logic later
   const queryClient = useQueryClient();
   const { location } = useLocation();
-  const selectedAddress = location?.address || '1234 Culinary Street, Flavor...';
+  const selectedAddress = location?.address || 'Pick your location';
 
   const { data: dishes = [], isLoading } = useQuery({
     queryKey: ["dishes"],

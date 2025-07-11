@@ -23,7 +23,7 @@ export default function ChefScreen() {
 
   const userId = "1";
   const { location } = useLocation();
-  const selectedAddress = location?.address || '1234 Culinary Street, Flavor...';
+  const selectedAddress = location?.address || 'Pick your location';
 
   const queryClient = useQueryClient();
 
