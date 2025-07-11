@@ -1,4 +1,3 @@
-// app/(onboarding-chefs)/chef_kyc.tsx
 import 'react-native-url-polyfill/auto';
 import 'react-native-get-random-values';
 import React, { useState, useEffect } from "react";
@@ -143,6 +142,9 @@ export default function ChefKYC() {
 
     setSubmitting(true);
 
+    // Check if FSSAI document or PCC certificate is missing
+    const isRestricted = !form.fssaiDoc || !form.pccDoc;
+
     // 1) update auth user
     const { error: authError } = await supabase.auth.updateUser({
       email: form.email,
@@ -159,7 +161,7 @@ export default function ChefKYC() {
       id: chefFolder,
       name: form.fullName,
       dob: form.dob.toISOString().split("T")[0], // not-null
-      is_restricted: false,                        // not-null boolean
+      is_restricted: isRestricted,               // set is_restricted based on missing documents
       fssai_number: form.fssaiNum,
       fssai_license_img: form.fssaiDoc,
       pcc_certificate: form.pccDoc,

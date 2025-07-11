@@ -161,69 +161,80 @@ export default function SignUpEmailScreen() {
   };
 
   const handleSignUp = async () => {
-    // Reset all errors
-    setEmailError('');
-    setPasswordError('');
-    setConfirmError('');
+  // Reset all errors
+  setEmailError('');
+  setPasswordError('');
+  setConfirmError('');
 
-    // Validation checks
-    let hasErrors = false;
+  // Validation checks
+  let hasErrors = false;
 
-    if (!email.trim()) {
-      setEmailError('Email is required');
-      hasErrors = true;
-    } else if (!validateEmail(email.trim())) {
-      setEmailError('Please enter a valid email address');
-      hasErrors = true;
-    }
+  if (!email.trim()) {
+    setEmailError('Email is required');
+    hasErrors = true;
+  } else if (!validateEmail(email.trim())) {
+    setEmailError('Please enter a valid email address');
+    hasErrors = true;
+  }
 
-    if (!password) {
-      setPasswordError('Password is required');
-      hasErrors = true;
-    } else if (passwordStrength && passwordStrength.score < 3) {
-      setPasswordError('Password is too weak. Please choose a stronger password.');
-      hasErrors = true;
-    }
+  if (!password) {
+    setPasswordError('Password is required');
+    hasErrors = true;
+  } else if (passwordStrength && passwordStrength.score < 3) {
+    setPasswordError('Password is too weak. Please choose a stronger password.');
+    hasErrors = true;
+  }
 
-    if (!confirm) {
-      setConfirmError('Please confirm your password');
-      hasErrors = true;
-    } else if (password !== confirm) {
-      setConfirmError('Passwords do not match');
-      hasErrors = true;
-    }
+  if (!confirm) {
+    setConfirmError('Please confirm your password');
+    hasErrors = true;
+  } else if (password !== confirm) {
+    setConfirmError('Passwords do not match');
+    hasErrors = true;
+  }
 
-    if (hasErrors) {
+  if (hasErrors) {
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+    });
+
+    if (error) {
+      console.error('Sign-up Error:', error);
+
+      // Handle specific error types
+      if (error.message.includes('invalid format') || error.message.includes('email')) {
+        setEmailError('Invalid email format. Please check your email address.');
+      } else if (error.message.includes('password')) {
+        setPasswordError(error.message);
+      } else if (error.message.includes('already registered') || error.message.includes('already exists')) {
+        setEmailError('This email is already registered. Try logging in instead.');
+      } else {
+        Alert.alert('Sign-up Error', error.message);
+      }
       return;
     }
 
-    setLoading(true);
-    
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-      });
+    // Mark as new user & store email for later verification
+    await AsyncStorage.setItem('isNewUser', 'true');
+    await AsyncStorage.setItem('emailForSignup', email.trim());
 
-      if (error) {
-        console.error('Sign-up Error:', error);
-        
-        // Handle specific error types
-        if (error.message.includes('invalid format') || error.message.includes('email')) {
-          setEmailError('Invalid email format. Please check your email address.');
-        } else if (error.message.includes('password')) {
-          setPasswordError(error.message);
-        } else if (error.message.includes('already registered') || error.message.includes('already exists')) {
-          setEmailError('This email is already registered. Try logging in instead.');
-        } else {
-          Alert.alert('Sign-up Error', error.message);
-        }
-        return;
-      }
+    // Get the user ID from supabase auth
+    const userId = data?.user?.id;
 
-      // Mark as new user & store email for later verification
-      await AsyncStorage.setItem('isNewUser', 'true');
-      await AsyncStorage.setItem('emailForSignup', email.trim());
+    if (userId) {
+      // Now we associate the new user with a profile
+      await supabase
+        .from('user_profiles')
+        .upsert({
+          user_id: userId,
+        });
 
       // Process referral code if provided
       if (referralCode.trim()) {
@@ -232,14 +243,17 @@ export default function SignUpEmailScreen() {
 
       // Route immediately to email-confirm
       router.replace('/(onboarding-customers)/kyc_landing_accept');
-      
-    } catch (err) {
-      console.error('Unexpected error:', err);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
-    } finally {
-      setLoading(false);
+    } else {
+      Alert.alert('Error', 'Unable to create user profile.');
     }
-  };
+  } catch (error) {
+    console.error('Error:', error);
+    Alert.alert('Error', 'An unexpected error occurred.');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <SafeAreaView style={styles.container}>

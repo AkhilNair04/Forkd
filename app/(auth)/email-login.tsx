@@ -41,10 +41,16 @@ export default function LoginEmailScreen() {
       return;
     }
 
-    // mark returning user
+    // Get the session and store it in AsyncStorage
+    const { data: session } = await supabase.auth.getSession();
+    if (session) {
+      await AsyncStorage.setItem('supabaseSession', JSON.stringify(session));
+    }
+
+    // Mark returning user
     await AsyncStorage.setItem('isNewUser', 'false');
 
-    // decide which tab to show based on stored role
+    // Decide which tab to show based on stored role
     const role = await AsyncStorage.getItem('userRole');
     if (role === 'chef') {
       router.replace('/(tabs-chef)');
