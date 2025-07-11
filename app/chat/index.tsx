@@ -81,8 +81,42 @@ export default function ChatListScreen() {
       //   .eq('participants.user_id', userId)
       //   .order('updated_at', { ascending: false });
 
-      // Mock chat data for demo
+      // Mock chat data for demo including test chats
       const mockChats: ChatPreview[] = [
+        {
+          id: 'test-chat',
+          participant: {
+            id: 'test-customer',
+            name: 'Test Customer Chat',
+            avatar: 'https://ui-avatars.com/api/?name=TC&background=C67C4E&color=fff',
+            type: 'customer',
+            online: true,
+          },
+          lastMessage: {
+            text: 'Click to open test chat (Customer view)',
+            timestamp: new Date().toISOString(),
+            senderId: 'system',
+            read: false,
+          },
+          unreadCount: 1,
+        },
+        {
+          id: 'test-chat-chef',
+          participant: {
+            id: 'test-chef',
+            name: 'Test Chef Chat',
+            avatar: 'https://ui-avatars.com/api/?name=TF&background=C67C4E&color=fff',
+            type: 'chef',
+            online: true,
+          },
+          lastMessage: {
+            text: 'Click to open test chat (Chef view)',
+            timestamp: new Date().toISOString(),
+            senderId: 'system',
+            read: false,
+          },
+          unreadCount: 1,
+        },
         {
           id: 'chat-1',
           participant: {
@@ -214,7 +248,18 @@ export default function ChatListScreen() {
   };
 
   const openChat = (chat: ChatPreview) => {
-    // Mark messages as read
+    // Handle test chats specially
+    if (chat.id === 'test-chat') {
+      router.push('/test-chat');
+      return;
+    }
+    
+    if (chat.id === 'test-chat-chef') {
+      router.push('/test-chat-chef');
+      return;
+    }
+    
+    // Mark messages as read for regular chats
     markChatAsRead(chat.id);
     
     router.push({

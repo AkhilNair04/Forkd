@@ -10,6 +10,12 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { supabase } from '../constants/supabase';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+
+const PRIMARY = '#C67C4E';
+const BG = '#111';
+const CARD = '#444';
 
 export default function TestChatChefScreen() {
   const [messages, setMessages] = useState<any[]>([]);
@@ -123,10 +129,20 @@ export default function TestChatChefScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerText}>Test Chat - Chef Mario</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Feather name="arrow-left" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View style={styles.headerInfo}>
+          <Text style={styles.headerTitle}>Test Customer Chat</Text>
+          <Text style={styles.headerSubtitle}>Chef View • Live Test</Text>
+        </View>
         <TouchableOpacity onPress={loadMessages} style={styles.refreshButton}>
-          <Text style={styles.refreshText}>Refresh</Text>
+          <Ionicons name="refresh" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
 
@@ -136,6 +152,7 @@ export default function TestChatChefScreen() {
         renderItem={renderMessage}
         style={styles.messagesList}
         contentContainerStyle={styles.messagesContent}
+        showsVerticalScrollIndicator={false}
       />
 
       <View style={styles.inputContainer}>
@@ -143,11 +160,12 @@ export default function TestChatChefScreen() {
           style={styles.input}
           value={inputText}
           onChangeText={setInputText}
-          placeholder="Type a message as Chef Mario..."
+          placeholder="Type a message..."
+          placeholderTextColor="#999"
           multiline
         />
         <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-          <Text style={styles.sendButtonText}>Send</Text>
+          <Ionicons name="send" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -157,35 +175,43 @@ export default function TestChatChefScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: BG,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#C67C4E', // Chef theme color
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: CARD,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#333',
   },
-  headerText: {
+  backButton: {
+    padding: 8,
+  },
+  headerInfo: {
+    flex: 1,
+    marginHorizontal: 16,
+  },
+  headerTitle: {
+    color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+  },
+  headerSubtitle: {
+    color: '#bbb',
+    fontSize: 12,
+    marginTop: 2,
   },
   refreshButton: {
     padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 8,
-  },
-  refreshText: {
-    color: 'white',
-    fontWeight: 'bold',
   },
   loadingText: {
     textAlign: 'center',
     fontSize: 16,
     marginTop: 50,
+    color: '#fff',
   },
   messagesList: {
     flex: 1,
@@ -200,14 +226,12 @@ const styles = StyleSheet.create({
     maxWidth: '80%',
   },
   ownMessage: {
-    backgroundColor: '#C67C4E', // Chef color
+    backgroundColor: PRIMARY,
     alignSelf: 'flex-end',
   },
   otherMessage: {
-    backgroundColor: 'white',
+    backgroundColor: CARD,
     alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   messageText: {
     fontSize: 16,
@@ -216,7 +240,7 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   otherMessageText: {
-    color: '#333',
+    color: '#fff',
   },
   timestamp: {
     fontSize: 11,
@@ -227,34 +251,34 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   otherTimestamp: {
-    color: '#666',
+    color: '#bbb',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: CARD,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: '#333',
   },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#555',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginRight: 8,
+    backgroundColor: BG,
+    color: '#fff',
     maxHeight: 100,
   },
   sendButton: {
-    backgroundColor: '#C67C4E',
+    backgroundColor: PRIMARY,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
-  },
-  sendButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
