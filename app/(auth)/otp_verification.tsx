@@ -54,15 +54,22 @@ export default function OtpVerification() {
 
     // success!
     const isNew = (await AsyncStorage.getItem("isNewUser")) === "true";
+    const role = (await AsyncStorage.getItem("userRole")) || "customer";
+
     if (isNew) {
-      const role = (await AsyncStorage.getItem("userRole")) || "customer";
+      // first-time onboarding
       if (role === "chef") {
         router.replace("/(onboarding-chefs)/chef_kyc");
       } else {
         router.replace("/(onboarding-customers)/kyc_landing_accept");
       }
     } else {
-      router.replace("/(tabs)");
+      // returning user: route to their tab group
+      if (role === "chef") {
+        router.replace("/tabs-chef");
+      } else {
+        router.replace("/");
+      }
     }
   };
 

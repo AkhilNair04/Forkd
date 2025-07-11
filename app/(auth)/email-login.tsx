@@ -41,8 +41,16 @@ export default function LoginEmailScreen() {
       return;
     }
 
+    // mark returning user
     await AsyncStorage.setItem('isNewUser', 'false');
-    router.replace('/(tabs)');
+
+    // decide which tab to show based on stored role
+    const role = await AsyncStorage.getItem('userRole');
+    if (role === 'chef') {
+      router.replace('/(tabs-chef)');
+    } else {
+      router.replace('/(tabs)');
+    }
   };
 
   const handleForgotPassword = async () => {
@@ -105,7 +113,11 @@ export default function LoginEmailScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.loginButtonText}>LOG IN</Text>}
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.loginButtonText}>LOG IN</Text>
+            )}
           </TouchableOpacity>
 
           <Text style={styles.signupText}>
