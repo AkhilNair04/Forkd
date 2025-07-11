@@ -42,8 +42,22 @@ export default function SignUpEmailScreen() {
     await AsyncStorage.setItem('isNewUser', 'true');
     await AsyncStorage.setItem('emailForSignup', email.trim());
 
-    // Route immediately to email-confirm
-    router.replace('/(onboarding-customers)/kyc_landing_accept');
+    // Get the user ID from supabase auth
+    const userId = data?.user?.id;
+
+    if (userId) {
+      // Now we associate the new user with a profile
+      await supabase
+        .from('user_profiles')
+        .upsert({
+          user_id: userId,
+        });
+
+      // Route immediately to email-confirm
+      router.replace('/(onboarding-customers)/kyc_landing_accept');
+    } else {
+      Alert.alert('Error', 'Unable to create user profile.');
+    }
   };
 
   return (

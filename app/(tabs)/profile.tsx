@@ -10,10 +10,10 @@ import {
   Modal,
   ScrollView,
   StatusBar,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  StyleSheet,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -74,24 +74,65 @@ export default function ProfileScreen() {
 
   const loadUserProfile = async () => {
     try {
-      // In a real app, load from AsyncStorage or API
-      const savedProfile = await AsyncStorage.getItem("userProfile");
-      if (savedProfile) {
-        setUserProfile(JSON.parse(savedProfile));
+      // Get the authenticated user data from Supabase Auth
+      const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        console.error("Error fetching user:", error.message);
+        return;
+      }
+      const user = data?.user; // user data
+
+      if (!user) {
+        console.error("No user logged in");
+        return;
+      }
+
+      // Store the user data in AsyncStorage
+      await AsyncStorage.setItem("user", JSON.stringify(user));
+
+      // Fetch the user profile from the database using the user_id (same as user.id)
+      const { data: profileData, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", user.id) // Use the user.id to fetch the profile
+        .single(); // Fetch a single profile since user_id is unique
+
+      if (profileError) {
+        console.error("Error fetching user profile:", profileError);
+        return;
+      }
+
+      // Set the user profile state
+      if (profileData) {
+        setUserProfile({
+          name: profileData.full_name || "No Name",
+          email: user.email || "", // Default empty string if no email
+          phone: profileData.phone || "", // Default empty string if no phone
+          userType: profileData.user_type || "customer",
+          avatar: profileData.avatar_url || "", // Default empty string if no avatar
+          location: profileData.location || "Unknown",
+          joinDate: profileData.created_at
+            ? new Date(profileData.created_at).toLocaleDateString()
+            : "N/A", // Default value if no joinDate
+          bio: profileData.bio || "",
+        });
+        setProfileForm({
+          full_name: profileData.full_name || "",
+          location: profileData.location || "",
+          user_type: profileData.user_type || "customer",
+          bio: profileData.bio || "",
+        });
       }
     } catch (error) {
       console.error("Error loading profile:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogout = async () => {
-    console.log("Logout button pressed"); // Debug log
-
     try {
-      // Sign out from Supabase
       await supabase.auth.signOut();
-
-      // Clear all user-related data
       await AsyncStorage.multiRemove([
         "isLoggedIn",
         "userProfile",
@@ -99,16 +140,11 @@ export default function ProfileScreen() {
         "userType",
         "phoneForOTP",
         "expoPushToken",
+        "user",
       ]);
-
-      console.log("User data cleared"); // Debug log
-
-      // Navigate back to welcome screen
       router.replace("/(auth)/welcome-screen");
-      console.log("Navigation triggered"); // Debug log
     } catch (error) {
       console.error("Error during logout:", error);
-      // Even if there's an error, still navigate away
       router.replace("/(auth)/welcome-screen");
     }
   };
@@ -126,7 +162,6 @@ export default function ProfileScreen() {
 
     setSaving(true);
     try {
-      // Save to AsyncStorage for now
       const updatedProfile = {
         ...userProfile,
         name: profileForm.full_name,
@@ -149,19 +184,10 @@ export default function ProfileScreen() {
   };
 
   const handleLogoutWithConfirmation = () => {
-    console.log("Logout with confirmation button pressed"); // Debug log
     setShowLogoutModal(true);
   };
 
-  const StatCard = ({
-    icon,
-    value,
-    label,
-  }: {
-    icon: string;
-    value: string | number;
-    label: string;
-  }) => (
+  const StatCard = ({ icon, value, label }: { icon: string; value: string | number; label: string }) => (
     <View style={styles.statCard}>
       <Ionicons name={icon as any} size={24} color="#C67C4E" />
       <Text style={styles.statValue}>{value}</Text>
@@ -200,10 +226,7 @@ export default function ProfileScreen() {
     <>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       <SafeAreaView style={styles.container}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Profile</Text>
@@ -214,23 +237,16 @@ export default function ProfileScreen() {
 
           {/* Profile Card */}
           <View style={styles.profileCard}>
-            <Image source={{ uri: userProfile.avatar }} style={styles.avatar} />
+            <Image source={{ uri: userProfile.avatar || "" }} style={styles.avatar} />
             <View style={styles.profileInfo}>
               <Text style={styles.userName}>{userProfile.name}</Text>
               <Text style={styles.userType}>
-                {userProfile.userType === "customer"
-                  ? "👤 Customer"
-                  : "👨‍🍳 Chef"}
+                {userProfile.userType === "customer" ? "👤 Customer" : "👨‍🍳 Chef"}
               </Text>
               <Text style={styles.userLocation}>📍 {userProfile.location}</Text>
-              <Text style={styles.joinDate}>
-                Member since {userProfile.joinDate}
-              </Text>
+              <Text style={styles.joinDate}>Member since {userProfile.joinDate}</Text>
             </View>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => router.push("/customer-settings/customer-profile")}
-            >
+            <TouchableOpacity style={styles.editButton} onPress={() => router.push("/customer-settings/customer-profile")}>
               <Feather name="edit-2" size={18} color="#C67C4E" />
             </TouchableOpacity>
           </View>
@@ -239,26 +255,10 @@ export default function ProfileScreen() {
           <View style={styles.statsSection}>
             <Text style={styles.sectionTitle}>Your Stats</Text>
             <View style={styles.statsGrid}>
-              <StatCard
-                icon="restaurant"
-                value={userStats.totalOrders}
-                label="Orders"
-              />
-              <StatCard
-                icon="heart"
-                value={userStats.favoriteChefs}
-                label="Fav Chefs"
-              />
-              <StatCard
-                icon="bookmark"
-                value={userStats.savedDishes}
-                label="Saved Dishes"
-              />
-              <StatCard
-                icon="wallet"
-                value={`₹${userStats.totalSpent.toLocaleString()}`}
-                label="Total Spent"
-              />
+              <StatCard icon="restaurant" value={userStats.totalOrders} label="Orders" />
+              <StatCard icon="heart" value={userStats.favoriteChefs} label="Fav Chefs" />
+              <StatCard icon="bookmark" value={userStats.savedDishes} label="Saved Dishes" />
+              <StatCard icon="wallet" value={`₹${userStats.totalSpent.toLocaleString()}`} label="Total Spent" />
             </View>
           </View>
 
@@ -266,29 +266,9 @@ export default function ProfileScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Quick Actions</Text>
             <View style={styles.menuContainer}>
-              <MenuOption
-                icon="heart"
-                title="Favorites"
-                subtitle="Your saved chefs and dishes"
-                onPress={() => router.push("/favorites")}
-              />
-              <MenuOption
-                icon="clock"
-                title="Order History"
-                subtitle="View your past orders"
-                onPress={() =>
-                  Alert.alert(
-                    "Coming Soon",
-                    "Order history feature will be available soon!"
-                  )
-                }
-              />
-              <MenuOption
-                icon="message-circle"
-                title="Messages"
-                subtitle="Chat with your chefs"
-                onPress={() => router.push("/chat")}
-              />
+              <MenuOption icon="heart" title="Favorites" subtitle="Your saved chefs and dishes" onPress={() => router.push("/favorites")} />
+              <MenuOption icon="clock" title="Order History" subtitle="View your past orders" onPress={() => Alert.alert("Coming Soon", "Order history feature will be available soon!")} />
+              <MenuOption icon="message-circle" title="Messages" subtitle="Chat with your chefs" onPress={() => router.push("/chat")} />
             </View>
           </View>
 
@@ -296,47 +276,15 @@ export default function ProfileScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Settings & Support</Text>
             <View style={styles.menuContainer}>
-              <MenuOption
-                icon="user"
-                title="Account Settings"
-                subtitle="Edit profile and preferences"
-                onPress={() => router.push("/customer-settings/settings")}
-              />
-              <MenuOption
-                icon="bell"
-                title="Notifications"
-                subtitle="Manage notification preferences"
-                onPress={() => router.push("/notification-demo")}
-              />
-              <MenuOption
-                icon="shield"
-                title="Privacy & Security"
-                subtitle="Manage your privacy settings"
-                onPress={() =>
-                  Alert.alert(
-                    "Coming Soon",
-                    "Privacy settings will be available soon!"
-                  )
-                }
-              />
-              <MenuOption
-                icon="help-circle"
-                title="Help & Support"
-                subtitle="Get help and contact support"
-                onPress={() => router.push("/customer-settings/support")}
-              />
+              <MenuOption icon="user" title="Account Settings" subtitle="Edit profile and preferences" onPress={() => router.push("/customer-settings/settings")} />
+              <MenuOption icon="bell" title="Notifications" subtitle="Manage notification preferences" onPress={() => router.push("/notification-demo")} />
+              <MenuOption icon="shield" title="Privacy & Security" subtitle="Manage your privacy settings" onPress={() => Alert.alert("Coming Soon", "Privacy settings will be available soon!")} />
+              <MenuOption icon="help-circle" title="Help & Support" subtitle="Get help and contact support" onPress={() => router.push("/customer-settings/support")} />
             </View>
           </View>
 
           {/* Logout Button */}
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={() => {
-              console.log("Logout with confirmation button pressed!");
-              handleLogoutWithConfirmation();
-            }}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={styles.logoutButton} onPress={() => handleLogoutWithConfirmation()} activeOpacity={0.7}>
             <Feather name="log-out" size={20} color="#ff4444" />
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
@@ -344,39 +292,19 @@ export default function ProfileScreen() {
       </SafeAreaView>
 
       {/* Custom Logout Confirmation Modal */}
-      <Modal
-        visible={showLogoutModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowLogoutModal(false)}
-      >
+      <Modal visible={showLogoutModal} transparent animationType="fade" onRequestClose={() => setShowLogoutModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Feather name="log-out" size={24} color="#ff4444" />
               <Text style={styles.modalTitle}>Logout</Text>
             </View>
-            <Text style={styles.modalMessage}>
-              Are you sure you want to logout?
-            </Text>
+            <Text style={styles.modalMessage}>Are you sure you want to logout?</Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalCancelButton}
-                onPress={() => {
-                  console.log("Logout cancelled");
-                  setShowLogoutModal(false);
-                }}
-              >
+              <TouchableOpacity style={styles.modalCancelButton} onPress={() => setShowLogoutModal(false)}>
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalLogoutButton}
-                onPress={() => {
-                  console.log("Logout confirmed via modal");
-                  setShowLogoutModal(false);
-                  handleLogout();
-                }}
-              >
+              <TouchableOpacity style={styles.modalLogoutButton} onPress={() => { setShowLogoutModal(false); handleLogout(); }}>
                 <Text style={styles.modalLogoutText}>Logout</Text>
               </TouchableOpacity>
             </View>
@@ -385,18 +313,11 @@ export default function ProfileScreen() {
       </Modal>
 
       {/* Profile Completion Modal */}
-      <Modal
-        visible={showProfileModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowProfileModal(false)}
-      >
+      <Modal visible={showProfileModal} transparent animationType="slide" onRequestClose={() => setShowProfileModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Complete Your Profile</Text>
-            <Text style={styles.modalMessage}>
-              Please fill in the details below:
-            </Text>
+            <Text style={styles.modalMessage}>Please fill in the details below:</Text>
 
             {/* Profile Form */}
             <View style={styles.profileForm}>
@@ -405,27 +326,21 @@ export default function ProfileScreen() {
                 placeholder="Full Name"
                 placeholderTextColor="#666"
                 value={profileForm.full_name}
-                onChangeText={(text) =>
-                  setProfileForm({ ...profileForm, full_name: text })
-                }
+                onChangeText={(text) => setProfileForm({ ...profileForm, full_name: text })}
               />
               <TextInput
                 style={styles.input}
                 placeholder="Location"
                 placeholderTextColor="#666"
                 value={profileForm.location}
-                onChangeText={(text) =>
-                  setProfileForm({ ...profileForm, location: text })
-                }
+                onChangeText={(text) => setProfileForm({ ...profileForm, location: text })}
               />
               <TextInput
                 style={styles.input}
                 placeholder="Bio"
                 placeholderTextColor="#666"
                 value={profileForm.bio}
-                onChangeText={(text) =>
-                  setProfileForm({ ...profileForm, bio: text })
-                }
+                onChangeText={(text) => setProfileForm({ ...profileForm, bio: text })}
                 multiline
                 numberOfLines={3}
               />
@@ -433,24 +348,14 @@ export default function ProfileScreen() {
 
             {/* Loading Indicator */}
             {saving ? (
-              <ActivityIndicator
-                size="small"
-                color="#C67C4E"
-                style={styles.loadingIndicator}
-              />
+              <ActivityIndicator size="small" color="#C67C4E" style={styles.loadingIndicator} />
             ) : (
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={handleSaveProfile}
-              >
+              <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
                 <Text style={styles.saveButtonText}>Save Changes</Text>
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => setShowProfileModal(false)}
-            >
+            <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowProfileModal(false)}>
               <Text style={styles.modalCloseText}>Close</Text>
             </TouchableOpacity>
           </View>
@@ -459,6 +364,7 @@ export default function ProfileScreen() {
     </>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -495,6 +401,14 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     marginRight: 15,
+  },
+  avatarPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#333",
+    justifyContent: "center",
+    alignItems: "center",
   },
   profileInfo: {
     flex: 1,
