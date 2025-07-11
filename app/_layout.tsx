@@ -40,6 +40,9 @@ export default function RootLayout() {
                 <Stack.Screen name="notification-demo" options={{ headerShown: false }} />
                 <Stack.Screen name="chat" options={{ headerShown: false }} />
                 <Stack.Screen name="map-picker" options={{ headerShown: false }} />
+                <Stack.Screen name="order-history" options={{ headerShown: false }} />
+                <Stack.Screen name="privacy-security" options={{ headerShown: false }} />
+                <Stack.Screen name="customer-settings" options={{ headerShown: false }} />
                 <Stack.Screen name="+not-found" />
               </Stack>
               <StatusBar style="auto" />

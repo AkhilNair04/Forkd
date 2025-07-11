@@ -65,15 +65,62 @@ export default function ProfileScreen() {
   });
 
   const [userStats, setUserStats] = useState<UserStats>({
-    totalOrders: 42,
-    favoriteChefs: 8,
-    savedDishes: 25,
-    totalSpent: 12500,
+    totalOrders: 0,
+    favoriteChefs: 0,
+    savedDishes: 0,
+    totalSpent: 0,
   });
 
   useEffect(() => {
     loadUserProfile();
+    loadUserStats();
   }, []);
+
+  const loadUserStats = async () => {
+    try {
+      // Load from AsyncStorage or calculate from existing data
+      const orderHistory = await AsyncStorage.getItem('orderHistory');
+      const favoriteChefs = await AsyncStorage.getItem('favoriteChefs');
+      const savedDishes = await AsyncStorage.getItem('favoriteDishes');
+      
+      let stats = {
+        totalOrders: 0,
+        favoriteChefs: 0,
+        savedDishes: 0,
+        totalSpent: 0,
+      };
+
+      if (orderHistory) {
+        const orders = JSON.parse(orderHistory);
+        stats.totalOrders = orders.length;
+        stats.totalSpent = orders.reduce((total: number, order: any) => total + order.totalAmount, 0);
+      }
+
+      if (favoriteChefs) {
+        const chefs = JSON.parse(favoriteChefs);
+        stats.favoriteChefs = chefs.length;
+      }
+
+      if (savedDishes) {
+        const dishes = JSON.parse(savedDishes);
+        stats.savedDishes = dishes.length;
+      }
+
+      // If no real data, use some demo values
+      if (stats.totalOrders === 0) {
+        stats = {
+          totalOrders: 12,
+          favoriteChefs: 5,
+          savedDishes: 18,
+          totalSpent: 245.80,
+        };
+      }
+
+      setUserStats(stats);
+    } catch (error) {
+      console.error('Error loading user stats:', error);
+    }
+  };
 
   const loadUserProfile = async () => {
     try {
@@ -493,7 +540,7 @@ export default function ProfileScreen() {
               />
               <StatCard
                 icon="wallet"
-                value={`₹${userStats.totalSpent.toLocaleString()}`}
+                value={`$${userStats.totalSpent.toFixed(2)}`}
                 label="Total Spent"
               />
             </View>
@@ -513,12 +560,7 @@ export default function ProfileScreen() {
                 icon="clock"
                 title="Order History"
                 subtitle="View your past orders"
-                onPress={() =>
-                  Alert.alert(
-                    "Coming Soon",
-                    "Order history feature will be available soon!"
-                  )
-                }
+                onPress={() => router.push("/order-history")}
               />
               <MenuOption
                 icon="message-circle"
@@ -549,12 +591,7 @@ export default function ProfileScreen() {
                 icon="shield"
                 title="Privacy & Security"
                 subtitle="Manage your privacy settings"
-                onPress={() =>
-                  Alert.alert(
-                    "Coming Soon",
-                    "Privacy settings will be available soon!"
-                  )
-                }
+                onPress={() => router.push("/privacy-security")}
               />
               <MenuOption
                 icon="help-circle"

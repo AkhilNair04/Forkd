@@ -14,8 +14,12 @@ const Settings: React.FC = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} activeOpacity={0.8}>
-          <Feather name="arrow-left" size={26} color="#222" />
+        <TouchableOpacity 
+          style={styles.backButton} 
+          activeOpacity={0.8}
+          onPress={() => router.back()}
+        >
+          <Feather name="arrow-left" size={26} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerText}>Settings</Text>
       </View>
@@ -103,7 +107,7 @@ const CARD = "#444";
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: '#000',
     justifyContent: "flex-start",
   },
   header: {
@@ -114,7 +118,7 @@ const styles = StyleSheet.create({
     marginBottom: 25,
   },
   backButton: {
-    backgroundColor: "#fff",
+    backgroundColor: "#1a1a1a",
     borderRadius: 30,
     padding: 7,
     marginRight: 14,
@@ -129,7 +133,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   settingsBox: {
-    backgroundColor: CARD,
+    backgroundColor: '#1a1a1a',
     borderRadius: 24,
     marginHorizontal: 28,
     paddingTop: 18,
@@ -143,7 +147,7 @@ const styles = StyleSheet.create({
     paddingVertical: 22,
     paddingHorizontal: 22,
     borderBottomWidth: 1,
-    borderBottomColor: "#555",
+    borderBottomColor: "#333",
     justifyContent: "space-between",
   },
   itemText: {
@@ -153,7 +157,7 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: "row",
-    backgroundColor: CARD,
+    backgroundColor: '#1a1a1a',
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
     paddingHorizontal: 18,
