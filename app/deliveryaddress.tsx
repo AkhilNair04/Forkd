@@ -23,7 +23,7 @@ const DeliveryAddressScreen = () => {
 
   const handleEditLocation = () => {
     console.log('Navigating to map edit location screen...');
-    Alert.alert("Feature Coming Soon", "This would open a map to pick your location.");
+    router.push('/map-picker');
   };
 
   const handleSaveAddress = () => {

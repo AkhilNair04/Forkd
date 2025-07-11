@@ -12,10 +12,7 @@ import { Stack, router } from "expo-router";
 import { useState } from "react";
 import { FlatList, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const addresses = [
-  "1234 Culinary Street, Flavor Town, Near Food Plaza, Opp. Tasty Tower, Apt 56, Delight City, Gourmet State",
-];
+import { useLocation } from "@/context/LocationContext";
 
 export default function ChefScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -25,7 +22,8 @@ export default function ChefScreen() {
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
   const userId = "1";
-  const selectedAddress = addresses[0].split(" ").slice(0, 4).join(" ") + "...";
+  const { location } = useLocation();
+  const selectedAddress = location?.address || '1234 Culinary Street, Flavor...';
 
   const queryClient = useQueryClient();
 

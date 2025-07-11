@@ -6,9 +6,14 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function HeaderSection({ address }: { address: string }) {
   const router = useRouter();
+  
+  const handleDeliveryLocationPress = () => {
+    router.push('/map-picker');
+  };
+
   return (
     <View style={styles.topBar}>
-      <View>
+      <TouchableOpacity onPress={handleDeliveryLocationPress} style={styles.deliverySection}>
         <View style={styles.row}>
           <Text style={styles.deliverText}>DELIVER TO</Text>
           <IconSymbol
@@ -19,9 +24,9 @@ export default function HeaderSection({ address }: { address: string }) {
           />
         </View>
         <View style={styles.row}>
-          <Text style={styles.address}>{address}</Text>
+          <Text style={styles.address} numberOfLines={1}>{address}</Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       <View style={styles.icons}>
         {/* Chat button */}
@@ -62,6 +67,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  deliverySection: {
+    flex: 1,
+    marginRight: 16,
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -77,6 +86,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "500",
+    maxWidth: 200,
   },
   icons: {
     flexDirection: "row",

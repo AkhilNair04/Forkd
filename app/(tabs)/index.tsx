@@ -19,6 +19,7 @@ import HeaderSection from '../../components/HeaderSection';
 import { dishes } from '../../constants/dishData';
 import { useCart } from '../../context/CartContext';
 import { getCurrentUserProfile } from '../../lib/supabase';
+import { useLocation } from '../../context/LocationContext';
 
 const { width } = Dimensions.get('window');
 
@@ -64,10 +65,10 @@ export default function HomeScreen() {
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
   const { addToCart } = useCart();
+  const { location } = useLocation();
 
-  // Mock address like dish and chef pages
-  const addresses = ["1234 Culinary Street, Flavor Town, Near Food Plaza, Opp. Tasty Tower, Apt 56, Delight City, Gourmet State"];
-  const selectedAddress = addresses[0].split(" ").slice(0, 4).join(" ") + "...";
+  // Use dynamic address from location hook
+  const selectedAddress = location?.address || '1234 Culinary Street, Flavor...';
 
   useEffect(() => {
     loadUserProfile();
