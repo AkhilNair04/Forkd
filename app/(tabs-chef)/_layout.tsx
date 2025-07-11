@@ -1,11 +1,10 @@
 // app/(tabs-chef)/_layout.tsx
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { Tabs, useRouter } from "expo-router";
+import { Tabs } from "expo-router";
 import { useColorScheme } from "react-native";
 
 export default function ChefTabsLayout() {
   const colorScheme = useColorScheme();
-  const router = useRouter();
 
   return (
     <Tabs
@@ -38,14 +37,11 @@ export default function ChefTabsLayout() {
       {/* Home */}
       <Tabs.Screen
         name="index"
-        listeners={{
-          tabPress: (e) => {
-            e.preventDefault();
-            router.push("./home");
-          },
+        options={{
+          title: "index",
+         tabBarIcon: ({ color }) => <Ionicons name="home" size={28} color={color} />
         }}
       />
-
       {/* Dishes / Chef */}
       <Tabs.Screen
         name="dishes"
@@ -71,12 +67,6 @@ export default function ChefTabsLayout() {
       {/* Reels */}
       <Tabs.Screen
         name="reels"
-        listeners={{
-          tabPress: (e) => {
-            e.preventDefault();
-            router.push("../chef-settings/chef-reels");
-          },
-        }}
         options={{
           title: "Reels",
           tabBarIcon: ({ color }) => (
