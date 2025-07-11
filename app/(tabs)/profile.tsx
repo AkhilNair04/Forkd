@@ -340,7 +340,6 @@ export default function ProfileScreen() {
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </ScrollView>
-        )}
       </SafeAreaView>
 
       {/* Custom Logout Confirmation Modal */}
@@ -458,14 +457,6 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     marginRight: 15,
-  },
-  avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#333",
-    justifyContent: "center",
-    alignItems: "center",
   },
   profileInfo: {
     flex: 1,
