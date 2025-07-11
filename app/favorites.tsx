@@ -1,9 +1,16 @@
+import ItemCard from "@/components/ItemCard";
+import { fetchFavoriteChefs } from "@/constants/fetchFavoriteChefs";
+import { fetchFavoriteDishes } from "@/constants/fetchFavoriteDishes";
+import {
+  toggleFavoriteChef,
+  toggleFavoriteDish,
+} from "@/constants/updateFavorites";
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import React, { JSX, useState } from "react";
+import React, { useState } from "react";
 import {
   FlatList,
-  Image,
   StatusBar,
   StyleSheet,
   Text,
@@ -11,50 +18,39 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { chefs as favoriteChefs } from "@/constants/chefData";
-import { dishes } from "@/constants/dishData";
-
-
-const favoriteDishes = dishes.filter(d => d.isFavorite);
-
-type Dish = {
-  id: string;
-  name: string;
-  cuisine: string;
-  rating: number;
-  image: string;
-};
-
-type Chef = {
-  id: string;
-  name: string;
-  rating: number;
-  reviews: number;
-  avatar: string;
-};
 
 export default function FavoritesScreen() {
   const [selectedTab, setSelectedTab] = useState<"Dish" | "Chef">("Dish");
 
-  const renderDish = ({ item }: { item: Dish }) => (
-    <View style={styles.card}>
-      <Image source={{ uri: item.image }} style={styles.image} />
-      <Text style={styles.name}>{item.name}</Text>
-      <Text style={styles.meta}>
-        #{item.cuisine} • {item.rating} ⭐
-      </Text>
-    </View>
-  );
+  const userId = "1"; // 🔐 Replace with dynamic logic when auth is set
 
-  const renderChef = ({ item }: { item: Chef }) => (
-    <View style={styles.card}>
-      <Image source={{ uri: item.avatar }} style={styles.image} />
-      <Text style={styles.name}>{item.name}</Text>
-      <Text style={styles.meta}>
-        {item.rating} ⭐ ({item.reviews})
-      </Text>
-    </View>
-  );
+  const { data: favoriteChefs = [], refetch: refetchFavoriteChefs } = useQuery({
+    queryKey: ["favoriteChefs", userId],
+    queryFn: () => fetchFavoriteChefs(userId),
+  });
+
+  const { data: favoriteDishes = [], refetch: refetchFavoriteDishes } =
+    useQuery({
+      queryKey: ["favoriteDishes", userId],
+      queryFn: () => fetchFavoriteDishes(userId),
+    });
+
+  // Transform data into uniform structure for ItemCard
+  const transformedChefs = favoriteChefs.map((chef: any) => ({
+    ...chef,
+    name: chef.name,
+    cuisine: chef.specialties?.[0] || chef.cuisine || "Chef",
+    price: chef.pricePerHour ?? 500,
+    image: chef.imageUrl,
+  }));
+
+  const transformedDishes = favoriteDishes.map((dish: any) => ({
+    ...dish,
+    name: dish.title,
+    cuisine: dish.cuisine ?? "N/A",
+    price: dish.price ?? 400,
+    image: dish.imageUrl,
+  }));
 
   return (
     <SafeAreaView style={styles.container}>
@@ -94,14 +90,45 @@ export default function FavoritesScreen() {
 
       {/* FlatList View */}
       <FlatList
-        key={selectedTab} // forces re-render when switching types
-        data={selectedTab === "Dish" ? favoriteDishes : favoriteChefs}
+        key={selectedTab}
+        data={selectedTab === "Dish" ? transformedDishes : transformedChefs}
         keyExtractor={(item) => item.id}
-        renderItem={
-          selectedTab === "Dish"
-            ? (renderDish as ({ item }: { item: any }) => JSX.Element)
-            : (renderChef as ({ item }: { item: any }) => JSX.Element)
-        }
+        renderItem={({ item }) => {
+          const isFav =
+            selectedTab === "Dish"
+              ? favoriteDishes.some((d) => d.id === item.id)
+              : favoriteChefs.some((c) => c.id === item.id);
+
+          return (
+            <ItemCard
+              item={item}
+              isFavorite={isFav}
+              type={selectedTab.toLowerCase() as "dish" | "chef"}
+              onArrowPress={() => {
+                if (selectedTab === "Dish") {
+                  router.push({
+                    pathname: "/dish-details/[dishId]",
+                    params: { dishId: item.id },
+                  });
+                } else {
+                  router.push({
+                    pathname: "/chef-details/[chefId]",
+                    params: { chefId: item.id },
+                  });
+                }
+              }}
+              onToggleDone={async () => {
+                if (selectedTab === "Dish") {
+                  await toggleFavoriteDish(userId, item.id, isFav);
+                  await refetchFavoriteDishes();
+                } else {
+                  await toggleFavoriteChef(userId, item.id, isFav);
+                  await refetchFavoriteChefs();
+                }
+              }}
+            />
+          );
+        }}
         numColumns={2}
         columnWrapperStyle={{ justifyContent: "space-between" }}
         contentContainerStyle={{ padding: 16 }}
@@ -111,11 +138,12 @@ export default function FavoritesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { 
+    flex: 1, 
     backgroundColor: "#000",
+    width: '100%',
+    height: '100%',
   },
-
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -137,7 +165,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "600",
   },
-
   tabContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -166,29 +193,5 @@ const styles = StyleSheet.create({
     width: "60%",
     marginTop: 4,
     borderRadius: 10,
-  },
-
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 6,
-    width: "48%",
-    marginBottom: 16,
-  },
-  image: {
-    width: "100%",
-    height: 140,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-  },
-  meta: {
-    fontSize: 13,
-    color: "#555",
-    marginTop: 4,
   },
 });

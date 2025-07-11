@@ -3,56 +3,101 @@ import FilterModal from "@/components/FilterModal";
 import HeaderSection from "@/components/HeaderSection";
 import ItemCard from "@/components/ItemCard";
 import SearchBarWithFilter from "@/components/SearchBarWithFilter";
-import { fetchDishes, Dish } from "@/constants/fetchDishes";
+import SkeletonCard from "@/components/SkeletonCard";
+import { Dish, fetchDishes } from "@/constants/fetchDishes";
+import { fetchFavoriteDishes } from "@/constants/fetchFavoriteDishes";
+import { toggleFavoriteDish } from "@/constants/updateFavorites";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
 import { useState } from "react";
 import { FlatList, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
-
-const addresses = [
-  "1234 Culinary Street, Flavor Town, Near Food Plaza, Opp. Tasty Tower, Apt 56, Delight City, Gourmet State",
-];
+import { useLocation } from "@/context/LocationContext";
 
 export default function DishScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
 
-  const selectedAddress =
-    addresses[0].split(" ").slice(0, 4).join(" ") + "...";
+  const userId = "1"; // 🔐 Replace with auth logic later
+  const queryClient = useQueryClient();
+  const { location } = useLocation();
+  const selectedAddress = location?.address || '1234 Culinary Street, Flavor...';
 
   const { data: dishes = [], isLoading } = useQuery({
     queryKey: ["dishes"],
     queryFn: fetchDishes,
   });
 
-  const toggleFavorite = (id: string) => {
-    setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]
-    );
+  const { data: favoriteDishes = [] } =
+    useQuery({
+      queryKey: ["favoriteDishes", userId],
+      queryFn: () => fetchFavoriteDishes(userId),
+    });
+
+  const handleToggleFavorite = async (id: string, isCurrentlyFav: boolean) => {
+    await toggleFavoriteDish(userId, id, isCurrentlyFav);
+    await queryClient.invalidateQueries({
+      queryKey: ["favoriteDishes", userId],
+    });
   };
 
-  // Filter based on search query
-  const filteredDishes: Dish[] = dishes.filter(
-    (dish) =>
-      dish.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (dish as any).cuisine?.toLowerCase()?.includes(searchQuery.toLowerCase())
-  );
+  const filteredDishes: Dish[] = dishes.filter((dish) => {
+  const title = dish.title?.toLowerCase() ?? "";
+  const cuisine = (dish as any).cuisine?.toLowerCase() ?? "";
+  const dishTags = (dish.tags || []).map((t: string) => t.toLowerCase());
+  
+  const dishAllergies = (dish.allergies || []).map((a: string) => a.toLowerCase());
+
+  const matchesSearch =
+    title.includes(searchQuery.toLowerCase()) ||
+    cuisine.includes(searchQuery.toLowerCase());
+
+  const matchesCuisine =
+    selectedCuisines.length === 0 ||
+    selectedCuisines.includes((dish as any).cuisine);
+ const matchesDietary =
+    selectedDietary.length === 0 ||
+    selectedDietary.some((pref) =>
+      dishTags.includes(pref.toLowerCase())
+    );
+
+  const excludesAllergies =
+    selectedAllergies.length === 0 ||
+    !selectedAllergies.some((allergy) =>
+      dishAllergies.includes(allergy.toLowerCase())
+    );
+
+  return matchesSearch && matchesCuisine && matchesDietary && excludesAllergies;
+});
+
 
   const filterSections = [
     {
       label: "Cuisine Type",
-      options: ["Chinese", "Italian", "Indian", "Korean", "American", "Mexican"],
+      options: [
+        "Chinese",
+        "Italian",
+        "Indian",
+        "Korean",
+        "American",
+        "Mexican",
+      ],
       selected: selectedCuisines,
       setSelected: setSelectedCuisines,
     },
     {
       label: "Dietary Preferences",
-      options: ["Vegan", "Non-veg", "Vegetarian", "Gluten-free", "Halal", "Kosher"],
+      options: [
+        "Vegan",
+        "Non-veg",
+        "Vegetarian",
+        "Gluten-free",
+        "Halal",
+        "Kosher",
+      ],
       selected: selectedDietary,
       setSelected: setSelectedDietary,
     },
@@ -78,33 +123,57 @@ export default function DishScreen() {
           />
 
           <Text style={styles.sectionTitle}>All Dishes</Text>
-          <FlatList
-            data={filteredDishes}
-            keyExtractor={(item) => item.id}
-            numColumns={2}
-            columnWrapperStyle={{ justifyContent: "space-between" }}
-            contentContainerStyle={{ paddingBottom: 120 }}
-            renderItem={({ item }) => (
-              <ItemCard
-                item={{
-                  ...item,
-                  name: item.title,
-                  cuisine: (item as any).cuisine ?? "Unknown",
-                  rating: 4.5,
-                  image: (item as any).image ?? "", // if image is not in schema now
-                }}
-                isFavorite={favorites.includes(item.id)}
-                toggleFavorite={toggleFavorite}
-                onArrowPress={() =>
-                  router.push({
-                    pathname: "/dish-details/[dishId]",
-                    params: { dishId: item.id },
-                  })
-                }
-              />
-            )}
-          />
+
+          {isLoading ? (
+            <FlatList
+              data={[...Array(6).keys()]}
+              keyExtractor={(item) => item.toString()}
+              numColumns={2}
+              columnWrapperStyle={{ justifyContent: "space-between" }}
+              contentContainerStyle={{ paddingBottom: 120 }}
+              renderItem={() => <SkeletonCard />}
+            />
+          ) : filteredDishes.length === 0 ? (
+            <View style={styles.emptyStateContainer}>
+              <Text style={styles.emptyStateText}>
+                No dishes found matching your search.
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredDishes}
+              keyExtractor={(item) => item.id}
+              numColumns={2}
+              columnWrapperStyle={{ justifyContent: "space-between" }}
+              contentContainerStyle={{ paddingBottom: 120 }}
+              renderItem={({ item }) => {
+                const isFav = favoriteDishes.some((d) => d.id === item.id);
+                return (
+                  <ItemCard
+                    item={{
+                      ...item,
+                      name: item.title,
+                      cuisine: (item as any).cuisine ?? "Unknown",
+                      rating: item.rating,
+                      review: item.reviews,
+                      image: (item as any).image ?? "",
+                    }}
+                    isFavorite={isFav}
+                    type="dish"
+                    onArrowPress={() =>
+                      router.push({
+                        pathname: "/dish-details/[dishId]",
+                        params: { dishId: item.id },
+                      })
+                    }
+                    onToggleDone={() => handleToggleFavorite(item.id, isFav)}
+                  />
+                );
+              }}
+            />
+          )}
         </View>
+
         <FilterModal
           visible={showFilterModal}
           onClose={() => setShowFilterModal(false)}
@@ -117,6 +186,28 @@ export default function DishScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000", paddingHorizontal: 16, paddingTop: 40 },
-  sectionTitle: { color: "#fff", fontSize: 20, fontWeight: "bold", marginBottom: 12 },
+  container: {
+    flex: 1,
+    backgroundColor: "#000",
+    paddingHorizontal: 16,
+    paddingTop: 40,
+  },
+  sectionTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyStateText: {
+    marginBottom: 150,
+    color: "#fff",
+    fontSize: 16,
+    textAlign: "center",
+    opacity: 0.7,
+  },
 });

@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Alert,
     ScrollView,
@@ -11,6 +11,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PRIMARY = '#b87a51';
 const BG = '#111';
@@ -18,6 +19,7 @@ const CARD = '#444';
 
 export default function UserSettingsScreen() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
   
   // Personal Data Settings
   const [dataSettings, setDataSettings] = useState({
@@ -45,6 +47,43 @@ export default function UserSettingsScreen() {
     showContactInfo: false,
     allowChefContact: true,
   });
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      const savedSettings = await AsyncStorage.getItem('userSettings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        setDataSettings(settings.dataSettings || dataSettings);
+        setNotifications(settings.notifications || notifications);
+        setPrivacy(settings.privacy || privacy);
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
+
+  const saveSettings = async () => {
+    try {
+      setLoading(true);
+      const settings = {
+        dataSettings,
+        notifications,
+        privacy,
+        lastUpdated: new Date().toISOString(),
+      };
+      await AsyncStorage.setItem('userSettings', JSON.stringify(settings));
+      Alert.alert('Success', 'Your settings have been saved!');
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      Alert.alert('Error', 'Failed to save settings. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDataToggle = (key: keyof typeof dataSettings) => {
     setDataSettings(prev => ({ ...prev, [key]: !prev[key] }));
@@ -82,9 +121,18 @@ export default function UserSettingsScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Feather name="arrow-left" size={26} color="#222" />
+          <Feather name="arrow-left" size={26} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerText}>User Settings</Text>
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={saveSettings}
+          disabled={loading}
+        >
+          <Text style={styles.saveButtonText}>
+            {loading ? 'Saving...' : 'Save'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -359,20 +407,21 @@ const SettingNavItem: React.FC<SettingNavItemProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BG,
+    backgroundColor: '#000',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 10,
     marginLeft: 14,
+    marginRight: 14,
     marginBottom: 20,
   },
   backButton: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1a1a1a',
     borderRadius: 30,
     padding: 7,
-    marginRight: 14,
     elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.1,
@@ -382,13 +431,27 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 25,
     fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 50, // Compensate for save button
+  },
+  saveButton: {
+    backgroundColor: '#C67C4E',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   scrollContent: {
     paddingHorizontal: 16,
     paddingBottom: 100,
   },
   sectionCard: {
-    backgroundColor: CARD,
+    backgroundColor: '#1a1a1a',
     borderRadius: 20,
     marginBottom: 20,
     padding: 4,

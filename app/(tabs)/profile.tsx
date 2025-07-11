@@ -1,8 +1,9 @@
-import { supabase } from "@/constants/supabase";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { getCurrentUserProfile, supabase, updateUserAvatar, updateUserProfile, uploadAvatar } from '@/lib/supabase';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -42,6 +43,7 @@ export default function ProfileScreen() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   // Profile completion form data
   const [profileForm, setProfileForm] = useState({
@@ -52,25 +54,73 @@ export default function ProfileScreen() {
   });
 
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+91 98765 43210",
-    userType: "customer",
-    avatar: "https://randomuser.me/api/portraits/men/75.jpg",
-    location: "Mumbai, Maharashtra",
-    joinDate: "January 2024",
+    name: '',
+    email: '',
+    phone: '',
+    userType: 'customer',
+    avatar: 'https://ui-avatars.com/api/?name=User&background=666&color=fff&size=256',
+    location: '',
+    joinDate: '',
+    bio: ''
   });
 
   const [userStats, setUserStats] = useState<UserStats>({
-    totalOrders: 42,
-    favoriteChefs: 8,
-    savedDishes: 25,
-    totalSpent: 12500,
+    totalOrders: 0,
+    favoriteChefs: 0,
+    savedDishes: 0,
+    totalSpent: 0,
   });
 
   useEffect(() => {
     loadUserProfile();
+    loadUserStats();
   }, []);
+
+  const loadUserStats = async () => {
+    try {
+      // Load from AsyncStorage or calculate from existing data
+      const orderHistory = await AsyncStorage.getItem('orderHistory');
+      const favoriteChefs = await AsyncStorage.getItem('favoriteChefs');
+      const savedDishes = await AsyncStorage.getItem('favoriteDishes');
+      
+      let stats = {
+        totalOrders: 0,
+        favoriteChefs: 0,
+        savedDishes: 0,
+        totalSpent: 0,
+      };
+
+      if (orderHistory) {
+        const orders = JSON.parse(orderHistory);
+        stats.totalOrders = orders.length;
+        stats.totalSpent = orders.reduce((total: number, order: any) => total + order.totalAmount, 0);
+      }
+
+      if (favoriteChefs) {
+        const chefs = JSON.parse(favoriteChefs);
+        stats.favoriteChefs = chefs.length;
+      }
+
+      if (savedDishes) {
+        const dishes = JSON.parse(savedDishes);
+        stats.savedDishes = dishes.length;
+      }
+
+      // If no real data, use some demo values
+      if (stats.totalOrders === 0) {
+        stats = {
+          totalOrders: 12,
+          favoriteChefs: 5,
+          savedDishes: 18,
+          totalSpent: 245.80,
+        };
+      }
+
+      setUserStats(stats);
+    } catch (error) {
+      console.error('Error loading user stats:', error);
+    }
+  };
 
   const loadUserProfile = async () => {
     try {
@@ -151,12 +201,12 @@ export default function ProfileScreen() {
 
   const handleSaveProfile = async () => {
     if (!profileForm.full_name.trim()) {
-      Alert.alert("Missing Information", "Please enter your name");
+      Alert.alert('Missing Information', 'Please enter your name');
       return;
     }
 
     if (!profileForm.location) {
-      Alert.alert("Missing Information", "Please select your location");
+      Alert.alert('Missing Information', 'Please select your location');
       return;
     }
 
@@ -174,10 +224,11 @@ export default function ProfileScreen() {
       setUserProfile(updatedProfile);
 
       setShowProfileModal(false);
-      Alert.alert("Success", "Your profile has been updated!");
+      loadUserProfile(); // Reload profile data
+      Alert.alert('Success', 'Your profile has been updated!');
     } catch (error) {
-      console.error("Profile save error:", error);
-      Alert.alert("Error", "Something went wrong. Please try again.");
+      console.error('Profile save error:', error);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -289,6 +340,7 @@ export default function ProfileScreen() {
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
         </ScrollView>
+        )}
       </SafeAreaView>
 
       {/* Custom Logout Confirmation Modal */}
@@ -370,9 +422,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#000",
+    width: '100%',
+    height: '100%',
   },
   scrollContent: {
     paddingBottom: 100,
+    minHeight: '100%',
+    width: '100%',
+    flexGrow: 1,
   },
   header: {
     flexDirection: "row",
@@ -432,6 +489,12 @@ const styles = StyleSheet.create({
   joinDate: {
     fontSize: 12,
     color: "#666",
+  },
+  userBio: {
+    fontSize: 13,
+    color: '#ccc',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   editButton: {
     backgroundColor: "#2a2a2a",
@@ -688,48 +751,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 12,
   },
-  // User bio style
-  userBio: {
-    fontSize: 13,
-    color: "#ccc",
-    marginTop: 4,
-    fontStyle: "italic",
-  },
-  // Profile modal styles
-  profileModalContainer: {
-    backgroundColor: "#1a1a1a",
-    borderRadius: 20,
-    margin: 20,
-    maxHeight: "80%",
-    padding: 0,
-    overflow: "hidden",
-  },
-  profileModalContent: {
-    maxHeight: 400,
-    padding: 20,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#fff",
-    marginBottom: 8,
-  },
-  modalInput: {
-    backgroundColor: "#2a2a2a",
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: "#fff",
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  bioInput: {
-    minHeight: 80,
-    textAlignVertical: "top",
-  },
   userTypeContainer: {
     flexDirection: "row",
     gap: 12,
@@ -770,5 +791,40 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  // Enhanced profile modal styles
+  profileModalContainer: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 20,
+    margin: 20,
+    maxHeight: '80%',
+    padding: 0,
+    overflow: 'hidden',
+  },
+  profileModalContent: {
+    maxHeight: 400,
+    padding: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  modalInput: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#fff',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  bioInput: {
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
 });

@@ -1,53 +1,71 @@
 // components/ItemCard.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useCart } from "../context/CartContext"; // ✅ import cart hook
+import { useCart } from "../context/CartContext";
+import { useEffect, useState } from "react";
 
 export default function ItemCard({
   item,
   isFavorite,
-  toggleFavorite,
+  type, // "dish" or "chef"
   onArrowPress,
+  onToggleDone,
 }: {
   item: any;
   isFavorite: boolean;
-  toggleFavorite: (id: string) => void;
+  type: "dish" | "chef";
   onArrowPress: () => void;
+  onToggleDone?: () => void;
 }) {
-  const { addToCart } = useCart(); // ✅ use the cart context
+  const [favorite, setFavorite] = useState(isFavorite);
+  const { addToCart } = useCart();
+
+  useEffect(() => {
+    setFavorite(isFavorite);
+  }, [isFavorite]);
+
+  const handleToggle = async () => {
+    const newFav = !favorite;
+    setFavorite(newFav);
+    onToggleDone?.();
+  };
 
   return (
     <View style={styles.card}>
       <View style={styles.imageWrapper}>
         <Image source={{ uri: item.imageUrl }} style={styles.image} />
-        <TouchableOpacity style={styles.heartIcon} onPress={() => toggleFavorite(item.id)}>
+        <TouchableOpacity style={styles.heartIcon} onPress={handleToggle}>
           <Ionicons
-            name={isFavorite ? "heart" : "heart-outline"}
+            name={favorite ? "heart" : "heart-outline"}
             size={20}
-            color={isFavorite ? "#d67C4E" : "#fff"}
+            color={favorite ? "#d67C4E" : "#fff"}
           />
         </TouchableOpacity>
       </View>
+
       <Text style={styles.name}>{item.name}</Text>
-      <Text style={styles.cuisine}>#{item.cuisine}</Text>
+      <Text style={styles.cuisine}>
+        #{item.specialties?.[0] || item.cuisine || "N/A"}
+      </Text>
+
       <View style={styles.ratingRow}>
         <View style={styles.ratingLeft}>
           <Ionicons name="star" size={16} color="#FDC913" />
-          <Text style={styles.rating}>{item.rating}</Text>
+          <Text style={styles.rating}>{item.rating || "0.0"}</Text>
+          <Text style={styles.rating}> ({item.reviews || 0})</Text>
         </View>
         <TouchableOpacity style={styles.arrowButton} onPress={onArrowPress}>
           <Ionicons name="arrow-forward" size={16} color="white" />
         </TouchableOpacity>
       </View>
 
-      {/* ✅ Add to Cart Button */}
       <TouchableOpacity
         onPress={() =>
           addToCart({
             id: item.id,
             name: item.name,
             price: item.price || 400,
-            image: item.image,
+            image: item.imageUrl,
             meal_type: item.cuisine,
             quantity: 1,
           })
@@ -89,8 +107,6 @@ const styles = StyleSheet.create({
   ratingLeft: { flexDirection: "row", alignItems: "center" },
   rating: { color: "#000", fontSize: 14, marginLeft: 4 },
   arrowButton: { backgroundColor: "#C67C4E", padding: 6, borderRadius: 20 },
-
-  // ✅ styles for Add to Cart button
   cartButton: {
     backgroundColor: "#f59e0b",
     marginTop: 8,

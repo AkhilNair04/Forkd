@@ -1,6 +1,8 @@
 import { supabase } from "@/lib/supabase";
 
 export interface Chef {
+  service_type: string[];
+  experience_level: string;
   id: string;
   name: string;
   specialties: string[];
@@ -20,7 +22,7 @@ export async function fetchChefs(): Promise<Chef[]> {
   const { data, error } = await supabase
     .from("Chef")
     .select(
-      "id, name, specialties, cuisine, rating_avg, reviews, price_per_hour, is_verified, available_times"
+      "id, name, specialties, cuisine, rating_avg, reviews, price_per_hour, is_verified, available_times,experience_level,service_type"
     );
 
   if (error || !data) {
@@ -37,6 +39,8 @@ export async function fetchChefs(): Promise<Chef[]> {
       id: chef.id,
       name: chef.name,
       specialties: chef.specialties,
+      experience_level:chef.experience_level,
+      service_type:chef.service_type,
       cuisine: chef.cuisine,
       rating: chef.rating_avg,
       reviews: chef.reviews,

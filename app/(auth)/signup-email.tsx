@@ -9,6 +9,66 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/constants/supabase';
 
+interface PasswordStrength {
+  score: number;
+  percentage: number;
+  level: 'Very Weak' | 'Weak' | 'Fair' | 'Good' | 'Strong';
+  color: string;
+  checks: {
+    length: boolean;
+    lowercase: boolean;
+    uppercase: boolean;
+    numbers: boolean;
+    symbols: boolean;
+    noCommon: boolean;
+  };
+}
+
+const calculatePasswordStrength = (password: string): PasswordStrength => {
+  const checks = {
+    length: password.length >= 8,
+    lowercase: /[a-z]/.test(password),
+    uppercase: /[A-Z]/.test(password),
+    numbers: /\d/.test(password),
+    symbols: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+    noCommon: !isCommonPassword(password)
+  };
+
+  const score = Object.values(checks).filter(Boolean).length;
+  const percentage = Math.round((score / 6) * 100);
+
+  let level: PasswordStrength['level'];
+  let color: string;
+
+  if (score <= 1) {
+    level = 'Very Weak';
+    color = '#FF4444';
+  } else if (score <= 2) {
+    level = 'Weak';
+    color = '#FF8800';
+  } else if (score <= 3) {
+    level = 'Fair';
+    color = '#FFAA00';
+  } else if (score <= 4) {
+    level = 'Good';
+    color = '#88CC00';
+  } else {
+    level = 'Strong';
+    color = '#00CC44';
+  }
+
+  return { score, percentage, level, color, checks };
+};
+
+const isCommonPassword = (password: string): boolean => {
+  const commonPasswords = [
+    'password', '123456', '123456789', 'qwerty', 'abc123', 'password123',
+    '12345678', '111111', '123123', 'admin', 'letmein', 'welcome',
+    'monkey', '1234567890', 'dragon', 'sunshine', 'princess', 'football'
+  ];
+  return commonPasswords.includes(password.toLowerCase());
+};
+
 export default function SignUpEmailScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -17,30 +77,114 @@ export default function SignUpEmailScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showRetypePassword, setShowRetypePassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState<PasswordStrength | null>(null);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmError, setConfirmError] = useState('');
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleEmailChange = (newEmail: string) => {
+    setEmail(newEmail);
+    setEmailError('');
+    
+    if (newEmail.length > 0 && !validateEmail(newEmail)) {
+      setEmailError('Please enter a valid email address');
+    }
+  };
+
+  const handlePasswordChange = (newPassword: string) => {
+    setPassword(newPassword);
+    setPasswordError('');
+    
+    if (newPassword.length > 0) {
+      setPasswordStrength(calculatePasswordStrength(newPassword));
+    } else {
+      setPasswordStrength(null);
+    }
+
+    // Check confirm password match if it's already filled
+    if (confirm.length > 0) {
+      handleConfirmChange(confirm);
+    }
+  };
+
+  const handleConfirmChange = (newConfirm: string) => {
+    setConfirm(newConfirm);
+    setConfirmError('');
+    
+    if (newConfirm.length > 0 && newConfirm !== password) {
+      setConfirmError('Passwords do not match');
+    }
+  };
 
   const handleSignUp = async () => {
-    if (!email.trim() || !password) {
-      return Alert.alert('Missing Fields', 'Please fill out all fields.');
+    // Reset all errors
+    setEmailError('');
+    setPasswordError('');
+    setConfirmError('');
+
+    // Validation checks
+    let hasErrors = false;
+
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      hasErrors = true;
+    } else if (!validateEmail(email.trim())) {
+      setEmailError('Please enter a valid email address');
+      hasErrors = true;
     }
-    if (password !== confirm) {
-      return Alert.alert('Password Mismatch', 'Passwords do not match.');
+
+    if (!password) {
+      setPasswordError('Password is required');
+      hasErrors = true;
+    } else if (passwordStrength && passwordStrength.score < 3) {
+      setPasswordError('Password is too weak. Please choose a stronger password.');
+      hasErrors = true;
+    }
+
+    if (!confirm) {
+      setConfirmError('Please confirm your password');
+      hasErrors = true;
+    } else if (password !== confirm) {
+      setConfirmError('Passwords do not match');
+      hasErrors = true;
+    }
+
+    if (hasErrors) {
+      return;
     }
 
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-    });
-    setLoading(false);
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      });
 
-    if (error) {
-      console.error('Sign-up Error:', error);
-      return Alert.alert('Sign-up Error', error.message);
-    }
+      if (error) {
+        console.error('Sign-up Error:', error);
+        
+        // Handle specific error types
+        if (error.message.includes('invalid format') || error.message.includes('email')) {
+          setEmailError('Invalid email format. Please check your email address.');
+        } else if (error.message.includes('password')) {
+          setPasswordError(error.message);
+        } else if (error.message.includes('already registered') || error.message.includes('already exists')) {
+          setEmailError('This email is already registered. Try logging in instead.');
+        } else {
+          Alert.alert('Sign-up Error', error.message);
+        }
+        return;
+      }
 
-    // Mark as new user & store email for later verification
-    await AsyncStorage.setItem('isNewUser', 'true');
-    await AsyncStorage.setItem('emailForSignup', email.trim());
+      // Mark as new user & store email for later verification
+      await AsyncStorage.setItem('isNewUser', 'true');
+      await AsyncStorage.setItem('emailForSignup', email.trim());
 
     // Get the user ID from supabase auth
     const userId = data?.user?.id;
@@ -69,25 +213,30 @@ export default function SignUpEmailScreen() {
         <ScrollView contentContainerStyle={styles.scrollInner}>
           <Text style={styles.label}>EMAIL</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input, 
+              emailError && styles.inputError,
+              email.length > 0 && !emailError && validateEmail(email) && styles.inputSuccess
+            ]}
             placeholder="Enter your email"
-            placeholderTextColor="#888"
+            placeholderTextColor="#999"
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={handleEmailChange}
           />
+          {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
           <Text style={styles.label}>PASSWORD</Text>
           <View style={styles.passwordWrapper}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, passwordError && styles.inputError]}
               placeholder="••••••••"
-              placeholderTextColor="#888"
+              placeholderTextColor="#999"
               secureTextEntry={!showPassword}
               autoCapitalize="none"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={handlePasswordChange}
             />
             <TouchableOpacity
               style={styles.eyeIcon}
@@ -96,21 +245,122 @@ export default function SignUpEmailScreen() {
               <Feather
                 name={showPassword ? 'eye-off' : 'eye'}
                 size={20}
-                color="#888"
+                color="#999"
               />
             </TouchableOpacity>
           </View>
+          {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+
+          {/* Password Strength Indicator */}
+          {passwordStrength && (
+            <View style={styles.passwordStrengthContainer}>
+              <View style={styles.strengthHeader}>
+                <Text style={styles.strengthLabel}>Password Strength</Text>
+                <Text style={[styles.strengthLevel, { color: passwordStrength.color }]}>
+                  {passwordStrength.level} ({passwordStrength.percentage}%)
+                </Text>
+              </View>
+              
+              {/* Progress Bar */}
+              <View style={styles.progressBarContainer}>
+                <View style={styles.progressBarBackground}>
+                  <View 
+                    style={[
+                      styles.progressBar, 
+                      { 
+                        width: `${passwordStrength.percentage}%`,
+                        backgroundColor: passwordStrength.color 
+                      }
+                    ]} 
+                  />
+                </View>
+              </View>
+
+              {/* Requirements Checklist */}
+              <View style={styles.requirementsContainer}>
+                <View style={styles.requirementRow}>
+                  <Feather 
+                    name={passwordStrength.checks.length ? "check-circle" : "circle"} 
+                    size={16} 
+                    color={passwordStrength.checks.length ? "#00CC44" : "#666"} 
+                  />
+                  <Text style={[styles.requirementText, passwordStrength.checks.length && styles.requirementMet]}>
+                    At least 8 characters
+                  </Text>
+                </View>
+                
+                <View style={styles.requirementRow}>
+                  <Feather 
+                    name={passwordStrength.checks.lowercase ? "check-circle" : "circle"} 
+                    size={16} 
+                    color={passwordStrength.checks.lowercase ? "#00CC44" : "#666"} 
+                  />
+                  <Text style={[styles.requirementText, passwordStrength.checks.lowercase && styles.requirementMet]}>
+                    Lowercase letter (a-z)
+                  </Text>
+                </View>
+
+                <View style={styles.requirementRow}>
+                  <Feather 
+                    name={passwordStrength.checks.uppercase ? "check-circle" : "circle"} 
+                    size={16} 
+                    color={passwordStrength.checks.uppercase ? "#00CC44" : "#666"} 
+                  />
+                  <Text style={[styles.requirementText, passwordStrength.checks.uppercase && styles.requirementMet]}>
+                    Uppercase letter (A-Z)
+                  </Text>
+                </View>
+
+                <View style={styles.requirementRow}>
+                  <Feather 
+                    name={passwordStrength.checks.numbers ? "check-circle" : "circle"} 
+                    size={16} 
+                    color={passwordStrength.checks.numbers ? "#00CC44" : "#666"} 
+                  />
+                  <Text style={[styles.requirementText, passwordStrength.checks.numbers && styles.requirementMet]}>
+                    Number (0-9)
+                  </Text>
+                </View>
+
+                <View style={styles.requirementRow}>
+                  <Feather 
+                    name={passwordStrength.checks.symbols ? "check-circle" : "circle"} 
+                    size={16} 
+                    color={passwordStrength.checks.symbols ? "#00CC44" : "#666"} 
+                  />
+                  <Text style={[styles.requirementText, passwordStrength.checks.symbols && styles.requirementMet]}>
+                    Special character (!@#$...)
+                  </Text>
+                </View>
+
+                <View style={styles.requirementRow}>
+                  <Feather 
+                    name={passwordStrength.checks.noCommon ? "check-circle" : "circle"} 
+                    size={16} 
+                    color={passwordStrength.checks.noCommon ? "#00CC44" : "#666"} 
+                  />
+                  <Text style={[styles.requirementText, passwordStrength.checks.noCommon && styles.requirementMet]}>
+                    Not a common password
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
 
           <Text style={styles.label}>RE-TYPE PASSWORD</Text>
           <View style={styles.passwordWrapper}>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input, 
+                confirmError && styles.inputError,
+                confirm.length > 0 && !confirmError && password === confirm && styles.inputSuccess
+              ]}
               placeholder="Confirm password"
-              placeholderTextColor="#888"
+              placeholderTextColor="#999"
               secureTextEntry={!showRetypePassword}
               autoCapitalize="none"
               value={confirm}
-              onChangeText={setConfirm}
+              onChangeText={handleConfirmChange}
             />
             <TouchableOpacity
               style={styles.eyeIcon}
@@ -119,15 +369,25 @@ export default function SignUpEmailScreen() {
               <Feather
                 name={showRetypePassword ? 'eye-off' : 'eye'}
                 size={20}
-                color="#888"
+                color="#999"
               />
             </TouchableOpacity>
           </View>
+          {confirmError ? <Text style={styles.errorText}>{confirmError}</Text> : null}
 
           <TouchableOpacity
-            style={styles.signUpButton}
+            style={[
+              styles.signUpButton,
+              (Boolean(emailError) || Boolean(passwordError) || Boolean(confirmError) || 
+               !email.trim() || !password || !confirm ||
+               !validateEmail(email.trim()) || password !== confirm ||
+               (passwordStrength !== null && passwordStrength.score < 3)) && styles.signUpButtonDisabled
+            ]}
             onPress={handleSignUp}
-            disabled={loading}
+            disabled={loading || Boolean(emailError) || Boolean(passwordError) || Boolean(confirmError) || 
+                     !email.trim() || !password || !confirm ||
+                     !validateEmail(email.trim()) || password !== confirm ||
+                     (passwordStrength !== null && passwordStrength.score < 3)}
           >
             {loading
               ? <ActivityIndicator color="#fff" />
@@ -147,9 +407,84 @@ const styles = StyleSheet.create({
   formWrapper: { flex: 1, backgroundColor: '#3F3F3F', borderTopLeftRadius: 30, borderTopRightRadius: 30, overflow: 'hidden' },
   scrollInner: { padding: 20, paddingBottom: 60 },
   label: { color: '#fff', fontSize: 13, marginTop: 12, marginBottom: 6, letterSpacing: 1 },
-  input: { backgroundColor: '#F1F5F9', borderRadius: 12, padding: 14, fontSize: 16, color: '#000' },
+  input: { backgroundColor: '#2A2A2A', borderRadius: 12, padding: 14, fontSize: 16, color: '#fff', borderWidth: 1, borderColor: '#444' },
+  inputError: { 
+    borderWidth: 2, 
+    borderColor: '#FF4444',
+    backgroundColor: '#2A1A1A'
+  },
+  inputSuccess: {
+    borderWidth: 2,
+    borderColor: '#C67C4E',
+    backgroundColor: '#2A2A2A'
+  },
+  errorText: {
+    color: '#FF4444',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
+  },
   passwordWrapper: { position: 'relative' },
   eyeIcon: { position: 'absolute', right: 12, top: 18 },
   signUpButton: { backgroundColor: '#C67C4E', paddingVertical: 16, borderRadius: 18, alignItems: 'center', marginTop: 30 },
+  signUpButtonDisabled: {
+    backgroundColor: '#666',
+    opacity: 0.6,
+  },
   signUpButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
+  
+  // Password Strength Styles
+  passwordStrengthContainer: {
+    marginTop: 12,
+    padding: 16,
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  strengthHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  strengthLabel: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  strengthLevel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  progressBarContainer: {
+    marginBottom: 16,
+  },
+  progressBarBackground: {
+    height: 6,
+    backgroundColor: '#444',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  requirementsContainer: {
+    marginTop: 4,
+  },
+  requirementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    paddingLeft: 4,
+  },
+  requirementText: {
+    fontSize: 13,
+    color: '#999',
+    marginLeft: 8,
+  },
+  requirementMet: {
+    color: '#00CC44',
+  },
 });
