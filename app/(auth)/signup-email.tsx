@@ -1,4 +1,4 @@
-// app/signup-email.tsx
+//app/signup-email.tsx
 import React, { useState } from 'react';
 import {
   SafeAreaView, View, Text, TextInput, TouchableOpacity,
@@ -74,32 +74,28 @@ const processReferralCode = async (code: string, newUserId: string | undefined) 
   try {
     if (!newUserId) return;
 
-    // Validate referral code using service
     const isValid = await ReferralService.validateReferralCode(code);
     if (!isValid) {
       Alert.alert('Invalid Code', 'The referral code you entered is not valid.');
       return;
     }
 
-    // Process referral using service
     const success = await ReferralService.processNewUserReferral(code, newUserId);
-    
+
     if (success) {
-      // Show success message
       Alert.alert(
         'Referral Applied!',
         'Congratulations! You\'ve received ₹100 off your first order. Check your rewards in the app!',
         [{ text: 'Great!', style: 'default' }]
       );
     } else {
-      // Fallback error message
       Alert.alert(
         'Error',
         'Failed to process referral code. Please try again.',
         [{ text: 'OK', style: 'default' }]
       );
     }
-    
+
   } catch (error) {
     console.error('Error processing referral code:', error);
     Alert.alert('Error', 'Failed to process referral code. Please try again.');
@@ -129,7 +125,6 @@ export default function SignUpEmailScreen() {
   const handleEmailChange = (newEmail: string) => {
     setEmail(newEmail);
     setEmailError('');
-    
     if (newEmail.length > 0 && !validateEmail(newEmail)) {
       setEmailError('Please enter a valid email address');
     }
@@ -138,14 +133,12 @@ export default function SignUpEmailScreen() {
   const handlePasswordChange = (newPassword: string) => {
     setPassword(newPassword);
     setPasswordError('');
-    
     if (newPassword.length > 0) {
       setPasswordStrength(calculatePasswordStrength(newPassword));
     } else {
       setPasswordStrength(null);
     }
 
-    // Check confirm password match if it's already filled
     if (confirm.length > 0) {
       handleConfirmChange(confirm);
     }
@@ -154,106 +147,81 @@ export default function SignUpEmailScreen() {
   const handleConfirmChange = (newConfirm: string) => {
     setConfirm(newConfirm);
     setConfirmError('');
-    
     if (newConfirm.length > 0 && newConfirm !== password) {
       setConfirmError('Passwords do not match');
     }
   };
 
   const handleSignUp = async () => {
-  // Reset all errors
-  setEmailError('');
-  setPasswordError('');
-  setConfirmError('');
+    setEmailError('');
+    setPasswordError('');
+    setConfirmError('');
+    let hasErrors = false;
 
-  // Validation checks
-  let hasErrors = false;
-
-  if (!email.trim()) {
-    setEmailError('Email is required');
-    hasErrors = true;
-  } else if (!validateEmail(email.trim())) {
-    setEmailError('Please enter a valid email address');
-    hasErrors = true;
-  }
-
-  if (!password) {
-    setPasswordError('Password is required');
-    hasErrors = true;
-  } else if (passwordStrength && passwordStrength.score < 3) {
-    setPasswordError('Password is too weak. Please choose a stronger password.');
-    hasErrors = true;
-  }
-
-  if (!confirm) {
-    setConfirmError('Please confirm your password');
-    hasErrors = true;
-  } else if (password !== confirm) {
-    setConfirmError('Passwords do not match');
-    hasErrors = true;
-  }
-
-  if (hasErrors) {
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-    });
-
-    if (error) {
-      console.error('Sign-up Error:', error);
-
-      // Handle specific error types
-      if (error.message.includes('invalid format') || error.message.includes('email')) {
-        setEmailError('Invalid email format. Please check your email address.');
-      } else if (error.message.includes('password')) {
-        setPasswordError(error.message);
-      } else if (error.message.includes('already registered') || error.message.includes('already exists')) {
-        setEmailError('This email is already registered. Try logging in instead.');
-      } else {
-        Alert.alert('Sign-up Error', error.message);
-      }
-      return;
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      hasErrors = true;
+    } else if (!validateEmail(email.trim())) {
+      setEmailError('Please enter a valid email address');
+      hasErrors = true;
     }
 
-    // Mark as new user & store email for later verification
-    await AsyncStorage.setItem('isNewUser', 'true');
-    await AsyncStorage.setItem('emailForSignup', email.trim());
+    if (!password) {
+      setPasswordError('Password is required');
+      hasErrors = true;
+    } else if (passwordStrength && passwordStrength.score < 3) {
+      setPasswordError('Password is too weak. Please choose a stronger password.');
+      hasErrors = true;
+    }
 
-    // Get the user ID from supabase auth
-    const userId = data?.user?.id;
+    if (!confirm) {
+      setConfirmError('Please confirm your password');
+      hasErrors = true;
+    } else if (password !== confirm) {
+      setConfirmError('Passwords do not match');
+      hasErrors = true;
+    }
 
-    if (userId) {
-      // Now we associate the new user with a profile
-      await supabase
-        .from('user_profiles')
-        .upsert({
-          user_id: userId,
-        });
+    if (hasErrors) return;
 
-      // Process referral code if provided
-      if (referralCode.trim()) {
-        await processReferralCode(referralCode.trim(), data.user?.id);
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      });
+
+      if (error) {
+        console.error('Sign-up Error:', error);
+        if (error.message.includes('invalid format') || error.message.includes('email')) {
+          setEmailError('Invalid email format. Please check your email address.');
+        } else if (error.message.includes('password')) {
+          setPasswordError(error.message);
+        } else if (error.message.includes('already registered') || error.message.includes('already exists')) {
+          setEmailError('This email is already registered. Try logging in instead.');
+        } else {
+          Alert.alert('Sign-up Error', error.message);
+        }
+        return;
       }
 
-      // Route immediately to email-confirm
+      await AsyncStorage.setItem('isNewUser', 'true');
+      await AsyncStorage.setItem('emailForSignup', email.trim());
+
+      if (referralCode.trim() && data?.user?.id) {
+        await processReferralCode(referralCode.trim(), data.user.id);
+      }
+
       router.replace('/(onboarding-customers)/kyc_landing_accept');
-    } else {
-      Alert.alert('Error', 'Unable to create user profile.');
-    }
-  } catch (error) {
-    console.error('Error:', error);
-    Alert.alert('Error', 'An unexpected error occurred.');
-  } finally {
-    setLoading(false);
-  }
-};
 
+    } catch (error) {
+      console.error('Error:', error);
+      Alert.alert('Error', 'An unexpected error occurred.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>

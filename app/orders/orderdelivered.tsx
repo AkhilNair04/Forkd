@@ -1,71 +1,136 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import StarRating from 'react-native-star-rating-widget';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { supabase } from '../../lib/supabase'; // Adjust the path if needed
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  Image,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import StarRating from "react-native-star-rating-widget";
+import { supabase } from "../../lib/supabase";
 
-// 1. Define your navigation stack param list
-type RootStackParamList = {
-  pastorderstimeline: undefined;
-  ordertracking: { orderId: string };
-  orderdelivered: { orderId: string };
-  chefrating: { orderId: string };
-};
+interface Props {
+  orderId: string; // Pass order_id as prop or fetch from context/params
+}
 
-// 2. Type for this screen's props
-type OrderDeliveredProps = NativeStackScreenProps<RootStackParamList, 'orderdelivered'>;
-
-const OrderDelivered = ({ route, navigation }: OrderDeliveredProps) => {
-  const [rating, setRating] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
-  const { orderId } = route.params;
+export default function OrderRatingScreen({ orderId }: Props) {
+  const [dishRating, setDishRating] = useState(4);
+  const [riderRating, setRiderRating] = useState(0);
+  const [review, setReview] = useState("");
 
   const handleSubmit = async () => {
-    if (rating === 0) {
-      Alert.alert('Please select a rating before submitting.');
-      return;
+    try {
+      const { error } = await supabase
+        .from("Orders")
+        .update({
+          dish_rating: dishRating,
+          rider_rating: riderRating,
+        })
+        .eq("order_id", orderId);
+
+      if (error) {
+        Alert.alert("Error", error.message);
+      } else {
+        Alert.alert("Success", "Thanks for your feedback!");
+      }
+    } catch (err) {
+      Alert.alert("Error", "Something went wrong.");
+      console.error(err);
     }
-    setSubmitting(true);
-    // Save the rating to Supabase
-    const { error } = await supabase
-      .from('orders')
-      .update({ order_rating: rating })
-      .eq('id', orderId);
-
-    setSubmitting(false);
-
-    if (error) {
-      Alert.alert('Error', 'Could not save rating. Please try again.');
-      return;
-    }
-
-    navigation.replace('chefrating', { orderId });
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.checkmark}>✓</Text>
-      <Text style={styles.header}>Order Delivered!</Text>
-      <Text style={styles.subtext}>How was your experience?</Text>
-      <StarRating rating={rating} onChange={setRating} />
-      <TouchableOpacity
-        style={[styles.button, submitting && { opacity: 0.5 }]}
-        onPress={handleSubmit}
-        disabled={submitting}
-      >
-        <Text style={styles.buttonText}>{submitting ? 'Submitting...' : 'SUBMIT'}</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Ionicons name="checkmark-circle-outline" size={120} color="#C67C4E" />
+
+      <Text style={styles.title}>Order Delivered!</Text>
+      <Text style={styles.subtitle}>Please let us know your thoughts!!</Text>
+
+      <Text style={styles.label}>DISH RATING:</Text>
+      <StarRating
+        rating={dishRating}
+        onChange={setDishRating}
+        starSize={36}
+        color="#C67C4E"
+      />
+
+      <Text style={styles.label}>RIDER RATING:</Text>
+      <StarRating
+        rating={riderRating}
+        onChange={setRiderRating}
+        starSize={36}
+        color="#C67C4E"
+      />
+
+      <Text style={styles.label}>DETAILED REVIEW:</Text>
+      <TextInput
+        multiline
+        placeholder="I loved the dish, it was very well prepared!"
+        value={review}
+        onChangeText={setReview}
+        style={styles.input}
+        placeholderTextColor="#777"
+      />
+
+      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+        <Text style={styles.buttonText}>SUBMIT</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#181818', justifyContent: 'center', alignItems: 'center' },
-  checkmark: { color: '#D89B6A', fontSize: 48, marginBottom: 20 },
-  header: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
-  subtext: { color: '#fff', fontSize: 16, marginVertical: 12, textAlign: 'center' },
-  button: { backgroundColor: '#D89B6A', padding: 16, borderRadius: 8, marginTop: 20 },
-  buttonText: { color: '#fff', fontWeight: 'bold' }
+  container: {
+    padding: 24,
+    paddingTop: 60,
+    alignItems: "center",
+    backgroundColor: "#000",
+    flexGrow: 1,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#fff",
+    marginTop: 20,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#fff",
+    marginTop: 10,
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  label: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+    marginTop: 20,
+    alignSelf: "flex-start",
+  },
+  input: {
+    backgroundColor: "#f0f4fa",
+    padding: 16,
+    width: "100%",
+    borderRadius: 12,
+    marginTop: 10,
+    color: "#333",
+  },
+  button: {
+    marginTop: 30,
+    backgroundColor: "#C67C4E",
+    borderRadius: 14,
+    paddingVertical: 16,
+    width: "100%",
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+    letterSpacing: 1,
+  },
 });
-
-export default OrderDelivered;
