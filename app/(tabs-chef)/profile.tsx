@@ -1,4 +1,6 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useEffect } from "react";
+import { Image } from "react-native";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -18,6 +20,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const PRIMARY = "#C67C4E";
 const BG = "#111";
 const CARD = "#444";
+const [chefProfile, setChefProfile] = useState<any>(null);
+const [loadingProfile, setLoadingProfile] = useState(true);
+
 
 export default function ChefSettingsScreen() {
   const router = useRouter();
@@ -45,6 +50,40 @@ export default function ChefSettingsScreen() {
     displayCertifications: true,
     allowDirectMessages: true,
   });
+
+  useEffect(() => {
+  const fetchChefProfile = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("Chef")
+        .select("*")
+        .eq("uuid", user.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data?.id) {
+        const { data: imageUrl } = supabase.storage
+          .from("chef")
+          .getPublicUrl(`${data.id}/avatar.png`);
+        setChefProfile({ ...data, imageUrl: imageUrl?.publicUrl });
+      }
+    } catch (err) {
+      console.error("Error fetching chef profile:", err);
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  fetchChefProfile();
+}, []);
+
 
   const [businessSettings, setBusinessSettings] = useState({
     taxIncluded: false,
