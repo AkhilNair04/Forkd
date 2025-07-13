@@ -2,11 +2,10 @@ import { RestrictedTabWrapper } from "@/components/RestrictedTabWrapper";
 import { Ionicons } from "@expo/vector-icons";
 import { ResizeMode, Video } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
-  Image,
   Modal,
   StyleSheet,
   Text,
@@ -17,8 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../constants/supabase";
 
 const CHEF_PROFILE = {
-  avatar: "https://randomuser.me/api/portraits/men/65.jpg",
-  name: "Chef Chris T",
+  name: "name", // This will be overridden with dynamic data
   specialty: "French, Japanese",
   rating: 4.7,
   followers: 30,
@@ -39,6 +37,47 @@ export default function ChefReelsPage() {
   const [userImages, setUserImages] = useState<string[]>([]);
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [chefName, setChefName] = useState(CHEF_PROFILE.name);
+
+  // Fetch chef name from Chef table
+  const fetchChefName = async () => {
+    try {
+      // Get current authenticated user
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error("❌ No authenticated user found:", userError?.message);
+        return;
+      }
+
+      // Fetch chef name from Chef table
+      const { data: chefData, error: chefError } = await supabase
+        .from("Chef")
+        .select("name")
+        .eq("id", user.id)
+        .single();
+
+      if (chefError) {
+        console.error("❌ Error fetching chef name:", chefError.message);
+        return;
+      }
+
+      if (chefData?.name) {
+        setChefName(chefData.name);
+        console.log("✅ Chef name loaded:", chefData.name);
+      }
+    } catch (error) {
+      console.error("❌ Error in fetchChefName:", error);
+    }
+  };
+
+  // Fetch chef name on component mount
+  useEffect(() => {
+    fetchChefName();
+  }, []);
 
   // Place "add" at first slot
   const gridData = [
@@ -169,21 +208,34 @@ export default function ChefReelsPage() {
     );
   };
 
+  if (!chefName) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#181818",
+        }}
+      >
+        <Text style={{ color: "#fff", fontSize: 18 }}>
+          No chef profile found.
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <RestrictedTabWrapper>
       <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
         <View style={styles.root}>
           {/* Profile Section */}
           <View style={styles.profileTop}>
-            <Image
-              source={{ uri: CHEF_PROFILE.avatar }}
-              style={styles.avatar}
-            />
             <TouchableOpacity style={styles.editBtn}>
               <Text style={styles.editText}>EDIT</Text>
             </TouchableOpacity>
             <Text style={styles.name}>
-              {CHEF_PROFILE.name}{" "}
+              {chefName}{" "}
               <Ionicons name="checkmark-circle" size={19} color="#FF934F" />
             </Text>
             <Text style={styles.specialty}>
@@ -192,7 +244,9 @@ export default function ChefReelsPage() {
             </Text>
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={20} color="#FF934F" />
-              <Text style={styles.ratingText}>{CHEF_PROFILE.rating}</Text>
+              <Text style={styles.ratingText}>
+                {CHEF_PROFILE.rating.toFixed(1)}
+              </Text>
             </View>
             <View style={styles.statsRow}>
               <View style={styles.statBox}>
@@ -269,7 +323,6 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#181818" },
   root: { flex: 1, backgroundColor: "#181818" },
   profileTop: { alignItems: "center", marginTop: 30, marginBottom: 16 },
-  avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 10 },
   editBtn: { position: "absolute", right: 26, top: 6 },
   editText: { color: "#FF934F", fontWeight: "bold", fontSize: 15 },
   name: { color: "#fff", fontSize: 22, fontWeight: "bold", marginTop: 6 },
