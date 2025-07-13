@@ -24,40 +24,54 @@ export default function LoginEmailScreen() {
   const [resetLoading, setResetLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Missing Fields', 'Please enter both email and password.');
-      return;
-    }
+  if (!email || !password) {
+    Alert.alert("Missing Fields", "Please enter both email and password.");
+    return;
+  }
 
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+  setLoading(true);
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  });
+
+  if (error) {
     setLoading(false);
+    Alert.alert("Login Failed", error.message);
+    return;
+  }
 
-    if (error) {
-      Alert.alert('Login Failed', error.message);
-      return;
-    }
+  // Wait for session to be properly updated and fetched
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
 
-    // Get the session and store it in AsyncStorage
-    const { data: session } = await supabase.auth.getSession();
-    if (session) {
-      await AsyncStorage.setItem('supabaseSession', JSON.stringify(session));
-    }
+  setLoading(false);
 
-    // Mark returning user
-    await AsyncStorage.setItem('isNewUser', 'false');
+  if (sessionError || !session) {
+    Alert.alert("Error", "Could not fetch session after login.");
+    console.error("❌ Session fetch error:", sessionError);
+    return;
+  }
 
-    // Decide which tab to show based on stored role
-    const role = await AsyncStorage.getItem('userRole');
-    if (role === 'chef') {
-      router.replace('/(tabs-chef)');
-    } else {
-      router.replace('/(tabs)');
-    }
-  };
+  // ✅ Save session to AsyncStorage
+  await AsyncStorage.setItem("supabaseSession", JSON.stringify(session));
+  console.log("✅ Session saved:", session);
+
+  // Mark returning user
+  await AsyncStorage.setItem("isNewUser", "false");
+
+  // Decide which tab to show based on stored role
+  const role = await AsyncStorage.getItem("userRole");
+  if (role === "chef") {
+    router.replace("/(tabs-chef)");
+  } else {
+    router.replace("/(tabs)");
+  }
+};
+
 
   const handleForgotPassword = async () => {
     if (!email) {

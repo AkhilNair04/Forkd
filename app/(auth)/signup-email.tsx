@@ -10,7 +10,6 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/constants/supabase';
 import { ReferralService } from '@/services/ReferralService';
 
-// Password strength helpers
 interface PasswordStrength {
   score: number;
   percentage: number;
@@ -25,14 +24,7 @@ interface PasswordStrength {
     noCommon: boolean;
   };
 }
-const isCommonPassword = (password: string): boolean => {
-  const commonPasswords = [
-    'password', '123456', '123456789', 'qwerty', 'abc123', 'password123',
-    '12345678', '111111', '123123', 'admin', 'letmein', 'welcome',
-    'monkey', '1234567890', 'dragon', 'sunshine', 'princess', 'football'
-  ];
-  return commonPasswords.includes(password.toLowerCase());
-};
+
 const calculatePasswordStrength = (password: string): PasswordStrength => {
   const checks = {
     length: password.length >= 8,
@@ -42,31 +34,75 @@ const calculatePasswordStrength = (password: string): PasswordStrength => {
     symbols: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
     noCommon: !isCommonPassword(password)
   };
+
   const score = Object.values(checks).filter(Boolean).length;
   const percentage = Math.round((score / 6) * 100);
+
   let level: PasswordStrength['level'];
   let color: string;
-  if (score <= 1) { level = 'Very Weak'; color = '#FF4444'; }
-  else if (score <= 2) { level = 'Weak'; color = '#FF8800'; }
-  else if (score <= 3) { level = 'Fair'; color = '#FFAA00'; }
-  else if (score <= 4) { level = 'Good'; color = '#88CC00'; }
-  else { level = 'Strong'; color = '#00CC44'; }
+
+  if (score <= 1) {
+    level = 'Very Weak';
+    color = '#FF4444';
+  } else if (score <= 2) {
+    level = 'Weak';
+    color = '#FF8800';
+  } else if (score <= 3) {
+    level = 'Fair';
+    color = '#FFAA00';
+  } else if (score <= 4) {
+    level = 'Good';
+    color = '#88CC00';
+  } else {
+    level = 'Strong';
+    color = '#00CC44';
+  }
+
   return { score, percentage, level, color, checks };
 };
 
-// Optional referral logic
+const isCommonPassword = (password: string): boolean => {
+  const commonPasswords = [
+    'password', '123456', '123456789', 'qwerty', 'abc123', 'password123',
+    '12345678', '111111', '123123', 'admin', 'letmein', 'welcome',
+    'monkey', '1234567890', 'dragon', 'sunshine', 'princess', 'football'
+  ];
+  return commonPasswords.includes(password.toLowerCase());
+};
+
 const processReferralCode = async (code: string, newUserId: string | undefined) => {
-  if (!newUserId) return;
-  const isValid = await ReferralService.validateReferralCode(code);
-  if (!isValid) {
-    Alert.alert('Invalid Code', 'The referral code you entered is not valid.');
-    return;
-  }
-  const success = await ReferralService.processNewUserReferral(code, newUserId);
-  if (success) {
-    Alert.alert('Referral Applied!', 'You\'ve received ₹100 off your first order.', [{ text: 'Great!' }]);
-  } else {
-    Alert.alert('Error', 'Failed to process referral code.', [{ text: 'OK' }]);
+  try {
+    if (!newUserId) return;
+
+    // Validate referral code using service
+    const isValid = await ReferralService.validateReferralCode(code);
+    if (!isValid) {
+      Alert.alert('Invalid Code', 'The referral code you entered is not valid.');
+      return;
+    }
+
+    // Process referral using service
+    const success = await ReferralService.processNewUserReferral(code, newUserId);
+    
+    if (success) {
+      // Show success message
+      Alert.alert(
+        'Referral Applied!',
+        'Congratulations! You\'ve received ₹100 off your first order. Check your rewards in the app!',
+        [{ text: 'Great!', style: 'default' }]
+      );
+    } else {
+      // Fallback error message
+      Alert.alert(
+        'Error',
+        'Failed to process referral code. Please try again.',
+        [{ text: 'OK', style: 'default' }]
+      );
+    }
+    
+  } catch (error) {
+    console.error('Error processing referral code:', error);
+    Alert.alert('Error', 'Failed to process referral code. Please try again.');
   }
 };
 
@@ -85,73 +121,139 @@ export default function SignUpEmailScreen() {
   const [showReferralInput, setShowReferralInput] = useState(false);
   const [referralCode, setReferralCode] = useState('');
 
-  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const handleEmailChange = (e: string) => {
-    setEmail(e);
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleEmailChange = (newEmail: string) => {
+    setEmail(newEmail);
     setEmailError('');
-    if (e && !validateEmail(e)) setEmailError('Invalid email address');
+    
+    if (newEmail.length > 0 && !validateEmail(newEmail)) {
+      setEmailError('Please enter a valid email address');
+    }
   };
-  const handlePasswordChange = (p: string) => {
-    setPassword(p);
+
+  const handlePasswordChange = (newPassword: string) => {
+    setPassword(newPassword);
     setPasswordError('');
-    p ? setPasswordStrength(calculatePasswordStrength(p)) : setPasswordStrength(null);
-    if (confirm) handleConfirmChange(confirm);
+    
+    if (newPassword.length > 0) {
+      setPasswordStrength(calculatePasswordStrength(newPassword));
+    } else {
+      setPasswordStrength(null);
+    }
+
+    // Check confirm password match if it's already filled
+    if (confirm.length > 0) {
+      handleConfirmChange(confirm);
+    }
   };
-  const handleConfirmChange = (c: string) => {
-    setConfirm(c);
+
+  const handleConfirmChange = (newConfirm: string) => {
+    setConfirm(newConfirm);
     setConfirmError('');
-    if (c && c !== password) setConfirmError('Passwords do not match');
+    
+    if (newConfirm.length > 0 && newConfirm !== password) {
+      setConfirmError('Passwords do not match');
+    }
   };
 
   const handleSignUp = async () => {
-    setEmailError(''); setPasswordError(''); setConfirmError('');
-    let hasErrors = false;
-    if (!email.trim()) { setEmailError('Email is required'); hasErrors = true; }
-    else if (!validateEmail(email.trim())) { setEmailError('Invalid email'); hasErrors = true; }
-    if (!password) { setPasswordError('Password is required'); hasErrors = true; }
-    else if (passwordStrength && passwordStrength.score < 3) { setPasswordError('Password is too weak'); hasErrors = true; }
-    if (!confirm) { setConfirmError('Please confirm your password'); hasErrors = true; }
-    else if (password !== confirm) { setConfirmError('Passwords do not match'); hasErrors = true; }
-    if (hasErrors) return;
+  // Reset all errors
+  setEmailError('');
+  setPasswordError('');
+  setConfirmError('');
 
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
-      if (error) {
-        if (error.message.includes('email')) setEmailError('Invalid or taken email');
-        else if (error.message.includes('password')) setPasswordError(error.message);
-        else Alert.alert('Sign-up Error', error.message);
-        return;
+  // Validation checks
+  let hasErrors = false;
+
+  if (!email.trim()) {
+    setEmailError('Email is required');
+    hasErrors = true;
+  } else if (!validateEmail(email.trim())) {
+    setEmailError('Please enter a valid email address');
+    hasErrors = true;
+  }
+
+  if (!password) {
+    setPasswordError('Password is required');
+    hasErrors = true;
+  } else if (passwordStrength && passwordStrength.score < 3) {
+    setPasswordError('Password is too weak. Please choose a stronger password.');
+    hasErrors = true;
+  }
+
+  if (!confirm) {
+    setConfirmError('Please confirm your password');
+    hasErrors = true;
+  } else if (password !== confirm) {
+    setConfirmError('Passwords do not match');
+    hasErrors = true;
+  }
+
+  if (hasErrors) {
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+    });
+
+    if (error) {
+      console.error('Sign-up Error:', error);
+
+      // Handle specific error types
+      if (error.message.includes('invalid format') || error.message.includes('email')) {
+        setEmailError('Invalid email format. Please check your email address.');
+      } else if (error.message.includes('password')) {
+        setPasswordError(error.message);
+      } else if (error.message.includes('already registered') || error.message.includes('already exists')) {
+        setEmailError('This email is already registered. Try logging in instead.');
+      } else {
+        Alert.alert('Sign-up Error', error.message);
       }
-
-      await AsyncStorage.setItem('isNewUser', 'true');
-      await AsyncStorage.setItem('emailForSignup', email.trim());
-
-      // ✅ Insert into Chef table
-      if (data?.user?.id) {
-        const { error: insertError } = await supabase.from("Chef").insert({
-          uuid: data.user.id,
-          email: email.trim(),
-        });
-        if (insertError) {
-          console.error("Chef insert error:", insertError);
-          Alert.alert("Error", "Failed to register as Chef.");
-          return;
-        }
-      }
-
-      if (referralCode.trim() && data?.user?.id) {
-        await processReferralCode(referralCode.trim(), data.user.id);
-      }
-
-      router.replace('/(onboarding-customers)/kyc_landing_accept');
-    } catch (error) {
-      console.error('Signup error:', error);
-      Alert.alert('Error', 'An unexpected error occurred.');
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+
+    // Mark as new user & store email for later verification
+    await AsyncStorage.setItem('isNewUser', 'true');
+    await AsyncStorage.setItem('emailForSignup', email.trim());
+
+    // Get the user ID from supabase auth
+    const userId = data?.user?.id;
+
+    if (userId) {
+      // Now we associate the new user with a profile
+      await supabase
+        .from('user_profiles')
+        .upsert({
+          user_id: userId,
+        });
+
+      // Process referral code if provided
+      if (referralCode.trim()) {
+        await processReferralCode(referralCode.trim(), data.user?.id);
+      }
+
+      // Route immediately to email-confirm
+      router.replace('/(onboarding-customers)/kyc_landing_accept');
+    } else {
+      Alert.alert('Error', 'Unable to create user profile.');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    Alert.alert('Error', 'An unexpected error occurred.');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -160,10 +262,13 @@ export default function SignUpEmailScreen() {
 
       <View style={styles.formWrapper}>
         <ScrollView contentContainerStyle={styles.scrollInner}>
-          {/* Email Input */}
           <Text style={styles.label}>EMAIL</Text>
           <TextInput
-            style={[styles.input, emailError && styles.inputError]}
+            style={[
+              styles.input, 
+              emailError && styles.inputError,
+              email.length > 0 && !emailError && validateEmail(email) && styles.inputSuccess
+            ]}
             placeholder="Enter your email"
             placeholderTextColor="#999"
             keyboardType="email-address"
@@ -173,7 +278,6 @@ export default function SignUpEmailScreen() {
           />
           {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
-          {/* Password Input */}
           <Text style={styles.label}>PASSWORD</Text>
           <View style={styles.passwordWrapper}>
             <TextInput
@@ -181,37 +285,162 @@ export default function SignUpEmailScreen() {
               placeholder="••••••••"
               placeholderTextColor="#999"
               secureTextEntry={!showPassword}
+              autoCapitalize="none"
               value={password}
               onChangeText={handlePasswordChange}
             />
-            <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
-              <Feather name={showPassword ? 'eye-off' : 'eye'} size={20} color="#999" />
+            <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowPassword(v => !v)}
+            >
+              <Feather
+                name={showPassword ? 'eye-off' : 'eye'}
+                size={20}
+                color="#999"
+              />
             </TouchableOpacity>
           </View>
           {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
 
-          {/* Confirm Password */}
+          {/* Password Strength Indicator */}
+          {passwordStrength && (
+            <View style={styles.passwordStrengthContainer}>
+              <View style={styles.strengthHeader}>
+                <Text style={styles.strengthLabel}>Password Strength</Text>
+                <Text style={[styles.strengthLevel, { color: passwordStrength.color }]}>
+                  {passwordStrength.level} ({passwordStrength.percentage}%)
+                </Text>
+              </View>
+              
+              {/* Progress Bar */}
+              <View style={styles.progressBarContainer}>
+                <View style={styles.progressBarBackground}>
+                  <View 
+                    style={[
+                      styles.progressBar, 
+                      { 
+                        width: `${passwordStrength.percentage}%`,
+                        backgroundColor: passwordStrength.color 
+                      }
+                    ]} 
+                  />
+                </View>
+              </View>
+
+              {/* Requirements Checklist */}
+              <View style={styles.requirementsContainer}>
+                <View style={styles.requirementRow}>
+                  <Feather 
+                    name={passwordStrength.checks.length ? "check-circle" : "circle"} 
+                    size={16} 
+                    color={passwordStrength.checks.length ? "#00CC44" : "#666"} 
+                  />
+                  <Text style={[styles.requirementText, passwordStrength.checks.length && styles.requirementMet]}>
+                    At least 8 characters
+                  </Text>
+                </View>
+                
+                <View style={styles.requirementRow}>
+                  <Feather 
+                    name={passwordStrength.checks.lowercase ? "check-circle" : "circle"} 
+                    size={16} 
+                    color={passwordStrength.checks.lowercase ? "#00CC44" : "#666"} 
+                  />
+                  <Text style={[styles.requirementText, passwordStrength.checks.lowercase && styles.requirementMet]}>
+                    Lowercase letter (a-z)
+                  </Text>
+                </View>
+
+                <View style={styles.requirementRow}>
+                  <Feather 
+                    name={passwordStrength.checks.uppercase ? "check-circle" : "circle"} 
+                    size={16} 
+                    color={passwordStrength.checks.uppercase ? "#00CC44" : "#666"} 
+                  />
+                  <Text style={[styles.requirementText, passwordStrength.checks.uppercase && styles.requirementMet]}>
+                    Uppercase letter (A-Z)
+                  </Text>
+                </View>
+
+                <View style={styles.requirementRow}>
+                  <Feather 
+                    name={passwordStrength.checks.numbers ? "check-circle" : "circle"} 
+                    size={16} 
+                    color={passwordStrength.checks.numbers ? "#00CC44" : "#666"} 
+                  />
+                  <Text style={[styles.requirementText, passwordStrength.checks.numbers && styles.requirementMet]}>
+                    Number (0-9)
+                  </Text>
+                </View>
+
+                <View style={styles.requirementRow}>
+                  <Feather 
+                    name={passwordStrength.checks.symbols ? "check-circle" : "circle"} 
+                    size={16} 
+                    color={passwordStrength.checks.symbols ? "#00CC44" : "#666"} 
+                  />
+                  <Text style={[styles.requirementText, passwordStrength.checks.symbols && styles.requirementMet]}>
+                    Special character (!@#$...)
+                  </Text>
+                </View>
+
+                <View style={styles.requirementRow}>
+                  <Feather 
+                    name={passwordStrength.checks.noCommon ? "check-circle" : "circle"} 
+                    size={16} 
+                    color={passwordStrength.checks.noCommon ? "#00CC44" : "#666"} 
+                  />
+                  <Text style={[styles.requirementText, passwordStrength.checks.noCommon && styles.requirementMet]}>
+                    Not a common password
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+
           <Text style={styles.label}>RE-TYPE PASSWORD</Text>
           <View style={styles.passwordWrapper}>
             <TextInput
-              style={[styles.input, confirmError && styles.inputError]}
+              style={[
+                styles.input, 
+                confirmError && styles.inputError,
+                confirm.length > 0 && !confirmError && password === confirm && styles.inputSuccess
+              ]}
               placeholder="Confirm password"
               placeholderTextColor="#999"
               secureTextEntry={!showRetypePassword}
+              autoCapitalize="none"
               value={confirm}
               onChangeText={handleConfirmChange}
             />
-            <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowRetypePassword(!showRetypePassword)}>
-              <Feather name={showRetypePassword ? 'eye-off' : 'eye'} size={20} color="#999" />
+            <TouchableOpacity
+              style={styles.eyeIcon}
+              onPress={() => setShowRetypePassword(v => !v)}
+            >
+              <Feather
+                name={showRetypePassword ? 'eye-off' : 'eye'}
+                size={20}
+                color="#999"
+              />
             </TouchableOpacity>
           </View>
           {confirmError ? <Text style={styles.errorText}>{confirmError}</Text> : null}
 
-          {/* Referral Input */}
-          <TouchableOpacity style={styles.referralToggle} onPress={() => setShowReferralInput(!showReferralInput)}>
-            <Text style={styles.referralToggleText}>Have a referral code?</Text>
-            <Feather name={showReferralInput ? 'chevron-up' : 'chevron-down'} size={16} color="#C67C4E" />
+          {/* Referral Code Section */}
+          <TouchableOpacity 
+            style={styles.referralToggle}
+            onPress={() => setShowReferralInput(!showReferralInput)}
+          >
+            <Text style={styles.referralToggleText}>
+              Have a referral code? 
+            </Text>
+            <Feather 
+              name={showReferralInput ? 'chevron-up' : 'chevron-down'} 
+              size={16} 
+              color="#C67C4E" 
+            />
           </TouchableOpacity>
+
           {showReferralInput && (
             <View style={styles.referralContainer}>
               <Text style={styles.label}>REFERRAL CODE (OPTIONAL)</Text>
@@ -219,23 +448,34 @@ export default function SignUpEmailScreen() {
                 style={styles.input}
                 placeholder="Enter referral code"
                 placeholderTextColor="#999"
+                autoCapitalize="characters"
                 value={referralCode}
                 onChangeText={setReferralCode}
               />
-              <Text style={styles.referralBenefit}>🎉 Get ₹100 off your first order!</Text>
+              <Text style={styles.referralBenefit}>
+                🎉 Get ₹100 off your first order!
+              </Text>
             </View>
           )}
 
-          {/* Submit */}
           <TouchableOpacity
             style={[
               styles.signUpButton,
-              (!email || !password || !confirm || emailError || passwordError || confirmError) && styles.signUpButtonDisabled
+              (Boolean(emailError) || Boolean(passwordError) || Boolean(confirmError) || 
+               !email.trim() || !password || !confirm ||
+               !validateEmail(email.trim()) || password !== confirm ||
+               (passwordStrength !== null && passwordStrength.score < 3)) && styles.signUpButtonDisabled
             ]}
             onPress={handleSignUp}
-            disabled={loading}
+            disabled={loading || Boolean(emailError) || Boolean(passwordError) || Boolean(confirmError) || 
+                     !email.trim() || !password || !confirm ||
+                     !validateEmail(email.trim()) || password !== confirm ||
+                     (passwordStrength !== null && passwordStrength.score < 3)}
           >
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.signUpButtonText}>SIGN UP</Text>}
+            {loading
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={styles.signUpButtonText}>SIGN UP</Text>
+            }
           </TouchableOpacity>
         </ScrollView>
       </View>

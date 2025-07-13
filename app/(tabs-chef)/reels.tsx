@@ -57,7 +57,7 @@ export default function ChefReelsPage() {
       const { data: chefData, error: chefError } = await supabase
         .from("Chef")
         .select("name")
-        .eq("id", user.id)
+        .eq("uuid", user.id)
         .single();
 
       if (chefError) {

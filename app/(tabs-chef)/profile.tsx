@@ -1,10 +1,8 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useEffect } from "react";
 import { Image } from "react-native";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "../../constants/supabase";
 import {
   Alert,
   ScrollView,
@@ -20,12 +18,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const PRIMARY = "#C67C4E";
 const BG = "#111";
 const CARD = "#444";
-const [chefProfile, setChefProfile] = useState<any>(null);
-const [loadingProfile, setLoadingProfile] = useState(true);
+
 
 
 export default function ChefSettingsScreen() {
   const router = useRouter();
+  const [chefProfile, setChefProfile] = useState<any>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
 
   const [availability, setAvailability] = useState({
     autoAcceptOrders: false,
@@ -51,38 +51,44 @@ export default function ChefSettingsScreen() {
     allowDirectMessages: true,
   });
 
-  useEffect(() => {
   const fetchChefProfile = async () => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+  try {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from("Chef")
-        .select("*")
-        .eq("uuid", user.id)
-        .single();
-
-      if (error) throw error;
-
-      if (data?.id) {
-        const { data: imageUrl } = supabase.storage
-          .from("chef")
-          .getPublicUrl(`${data.id}/avatar.png`);
-        setChefProfile({ ...data, imageUrl: imageUrl?.publicUrl });
-      }
-    } catch (err) {
-      console.error("Error fetching chef profile:", err);
-    } finally {
-      setLoadingProfile(false);
+    if (userError || !user) {
+      console.error("❌ No authenticated user found:", userError?.message);
+      return;
     }
-  };
 
-  fetchChefProfile();
-}, []);
+    // Fetch full chef profile
+    const { data: chefData, error: chefError } = await supabase
+      .from("Chef")
+      .select("id, name, bio, specialties, uuid, avatar_url")
+      .eq("uuid", user.id)
+      .single();
+
+    if (chefError) {
+      console.error("❌ Error fetching chef profile:", chefError.message);
+      return;
+    }
+
+    if (chefData?.id) {
+      setChefProfile({ ...chefData, imageUrl: chefData.avatar_url });
+      console.log("✅ Chef profile loaded:", chefData.name);
+      console.log("🖼️ Image URL:", chefData.avatar_url);
+    }
+  } catch (error) {
+    console.error("❌ Error in fetchChefProfile:", error);
+  } finally {
+    setLoadingProfile(false);
+  }
+};
+
+
+
 
 
   const [businessSettings, setBusinessSettings] = useState({
@@ -106,7 +112,6 @@ export default function ChefSettingsScreen() {
   const handleLogout = async () => {
   try {
     await supabase.auth.signOut();
-    await AsyncStorage.clear();
     router.replace("/(auth)/welcome-screen");
   } catch (err) {
     Alert.alert("Logout Failed", "Please try again.");
@@ -167,6 +172,12 @@ export default function ChefSettingsScreen() {
     console.log("Navigate to analytics");
   };
 
+  if (loadingProfile) {
+  console.log("⏳ Loading chef profile...");
+  fetchChefProfile();
+}
+
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -176,7 +187,43 @@ export default function ChefSettingsScreen() {
         <Text style={styles.headerText}>Chef Settings</Text>
       </View>
 
+      
+
+
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        
+        {chefProfile?.name && (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Chef Profile</Text>
+
+            <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 16 }}>
+              <Image
+                source={{ uri: chefProfile.imageUrl }}
+                style={{
+                  width: 70,
+                  height: 70,
+                  borderRadius: 35,
+                  marginRight: 16,
+                  backgroundColor: "#555",
+                }}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: "#fff", fontSize: 18, fontWeight: "bold" }}>
+                  {chefProfile.name}
+                </Text>
+                <Text style={{ color: "#bbb", fontSize: 14, marginTop: 4 }}>
+                  {chefProfile.bio || "No bio added"}
+                </Text>
+                <Text style={{ color: "#aaa", fontSize: 13, marginTop: 6 }}>
+                  Specialties: {chefProfile.specialties?.join(", ") || "N/A"}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+        
+        
         {/* Chef Availability Settings */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Availability Management</Text>
@@ -349,7 +396,7 @@ export default function ChefSettingsScreen() {
           <SettingNavItem
             title="Service Fee Settings"
             subtitle="Configure your service fees"
-            icon="calculator"
+            icon="settings"
             onPress={() => console.log("Service fees")}
           />
 
@@ -621,6 +668,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 100,
   },
+  profileCard: {
+  flexDirection: "row",
+  alignItems: "center",
+  backgroundColor: "#2A2A2A",
+  marginHorizontal: 16,
+  marginTop: 16,
+  marginBottom: 12,
+  borderRadius: 16,
+  padding: 16,
+},
+profileImage: {
+  width: 70,
+  height: 70,
+  borderRadius: 35,
+  marginRight: 16,
+},
+profileInfo: {
+  flex: 1,
+},
+chefName: {
+  color: "#fff",
+  fontSize: 20,
+  fontWeight: "bold",
+},
+chefBio: {
+  color: "#ccc",
+  fontSize: 14,
+  marginTop: 4,
+},
+chefSpecialties: {
+  color: "#aaa",
+  fontSize: 13,
+  marginTop: 6,
+},
   statusCard: {
     backgroundColor: PRIMARY + "20",
     borderRadius: 20,
