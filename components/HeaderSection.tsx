@@ -8,7 +8,7 @@ export default function HeaderSection({ address }: { address: string }) {
   const router = useRouter();
   
   const handleDeliveryLocationPress = () => {
-    router.push('/map-picker');
+    router.replace('/map-picker');
   };
 
   return (
