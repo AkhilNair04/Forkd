@@ -38,9 +38,10 @@ export default function ChefReelsPage() {
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [chefName, setChefName] = useState(CHEF_PROFILE.name);
+  const [chefId, setChefId] = useState<string | null>(null);
 
-  // Fetch chef name from Chef table
-  const fetchChefName = async () => {
+  // Fetch chef name and ID from Chef table
+  const fetchChefData = async () => {
     try {
       // Get current authenticated user
       const {
@@ -53,31 +54,129 @@ export default function ChefReelsPage() {
         return;
       }
 
-      // Fetch chef name from Chef table
-      const { data: chefData, error: chefError } = await supabase
-        .from("Chef")
-        .select("name")
-        .eq("id", user.id)
+      // First try to get chef info from user_profiles table
+      const { data: profileData, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("full_name, user_type")
+        .eq("user_id", user.id)
         .single();
 
-      if (chefError) {
-        console.error("❌ Error fetching chef name:", chefError.message);
+      if (profileError) {
+        console.error("❌ Error fetching user profile:", profileError.message);
         return;
       }
 
-      if (chefData?.name) {
-        setChefName(chefData.name);
-        console.log("✅ Chef name loaded:", chefData.name);
+      if (profileData?.user_type === "chef" && profileData?.full_name) {
+        setChefName(profileData.full_name);
+        console.log("✅ Chef name loaded from profile:", profileData.full_name);
+
+        // Try to get chef ID from Chef table using user_id
+        const { data: chefData, error: chefError } = await supabase
+          .from("Chef")
+          .select("id")
+          .eq("uuid", user.id)
+          .limit(1);
+
+        if (!chefError && chefData && chefData.length > 0) {
+          setChefId(chefData[0].id);
+          console.log("✅ Chef ID loaded:", chefData[0].id);
+        }
+        return;
       }
+
+      // If not found in user_profiles, try the Chef table
+      const { data: chefData, error: chefError } = await supabase
+        .from("Chef")
+        .select("id, name")
+        .eq("uuid", user.id) // Try uuid field first
+        .limit(1);
+
+      if (!chefError && chefData && chefData.length > 0) {
+        setChefName(chefData[0].name);
+        setChefId(chefData[0].id);
+        console.log(
+          "✅ Chef data loaded from Chef table:",
+          chefData[0].name,
+          chefData[0].id
+        );
+        return;
+      }
+
+      // If still not found, try with id field (for Chef table with custom IDs like C0001)
+      const { data: chefData2, error: chefError2 } = await supabase
+        .from("Chef")
+        .select("id, name")
+        .eq("id", user.id)
+        .limit(1);
+
+      if (!chefError2 && chefData2 && chefData2.length > 0) {
+        setChefName(chefData2[0].name);
+        setChefId(chefData2[0].id);
+        console.log(
+          "✅ Chef data loaded from Chef table (id):",
+          chefData2[0].name,
+          chefData2[0].id
+        );
+        return;
+      }
+
+      console.log("⚠️ No chef profile found for user:", user.id);
     } catch (error) {
-      console.error("❌ Error in fetchChefName:", error);
+      console.error("❌ Error in fetchChefData:", error);
     }
   };
 
-  // Fetch chef name on component mount
+  // Fetch chef data on component mount
   useEffect(() => {
-    fetchChefName();
+    fetchChefData();
   }, []);
+
+  // Load existing reels when chefId is available
+  useEffect(() => {
+    if (chefId) {
+      loadExistingReels();
+    }
+  }, [chefId]);
+
+  const loadExistingReels = async () => {
+    try {
+      if (!chefId) {
+        console.log("❌ No chef ID available");
+        return;
+      }
+
+      console.log(`🔍 Loading existing reels for chef: ${chefId}`);
+
+      // List files in the chef's folder
+      const { data: files, error } = await supabase.storage
+        .from("chef-reels")
+        .list(chefId);
+
+      if (error) {
+        console.error("❌ Error loading existing reels:", error);
+        return;
+      }
+
+      if (files && files.length > 0) {
+        // Get public URLs for all videos in the chef's folder
+        const reelUrls = files
+          .filter((file) => file.name && !file.name.endsWith("/")) // Filter out folders
+          .map((file) => {
+            const { publicUrl } = supabase.storage
+              .from("chef-reels")
+              .getPublicUrl(`${chefId}/${file.name}`).data;
+            return publicUrl;
+          });
+
+        setUserImages(reelUrls);
+        console.log(`✅ Loaded ${reelUrls.length} existing reels`);
+      } else {
+        console.log("📁 No existing reels found for this chef");
+      }
+    } catch (error) {
+      console.error("❌ Error in loadExistingReels:", error);
+    }
+  };
 
   // Place "add" at first slot
   const gridData = [
@@ -103,6 +202,15 @@ export default function ChefReelsPage() {
     try {
       setUploading(true);
 
+      // Check if we have chef ID
+      if (!chefId) {
+        Alert.alert(
+          "Upload Failed",
+          "Chef profile not found. Please try again."
+        );
+        return null;
+      }
+
       const { uri, fileName, mimeType } = asset;
       const response = await fetch(uri);
       const blob = await response.blob();
@@ -112,29 +220,40 @@ export default function ChefReelsPage() {
         return null;
       }
 
-      const name = fileName || `chef-reel-${Date.now()}`;
+      // Create folder structure: chef-reels/{chefId}/{filename}
+      const timestamp = Date.now();
+      const fileExtension = fileName?.split(".").pop() || "mp4";
+      const fileNameWithoutExt = fileName?.split(".")[0] || `reel-${timestamp}`;
+      const finalFileName = `${fileNameWithoutExt}-${timestamp}.${fileExtension}`;
+      const folderPath = `${chefId}/${finalFileName}`;
+
       const type = mimeType || "video/mp4";
+
+      console.log(`📁 Uploading to folder: ${folderPath}`);
 
       const { data, error } = await supabase.storage
         .from("chef-reels")
-        .upload(name, blob, {
+        .upload(folderPath, blob, {
           contentType: type,
           cacheControl: "3600",
         });
 
       if (error) {
+        console.error("❌ Upload error:", error);
         Alert.alert("Upload Failed", error.message);
         return null;
       }
 
       const { publicUrl } = supabase.storage
         .from("chef-reels")
-        .getPublicUrl(name).data;
+        .getPublicUrl(folderPath).data;
 
+      console.log("✅ Video uploaded successfully to:", folderPath);
       return publicUrl;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
+      console.error("❌ Upload error:", errorMessage);
       Alert.alert("Upload Failed", errorMessage);
       return null;
     } finally {
