@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
-  Image,
   Modal,
   StyleSheet,
   Text,
@@ -17,8 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../constants/supabase";
 
 const CHEF_PROFILE = {
-  avatar: "https://randomuser.me/api/portraits/men/65.jpg",
-  name: "Chef Chris T", // This will be overridden with dynamic data
+  name: "name", // This will be overridden with dynamic data
   specialty: "French, Japanese",
   rating: 4.7,
   followers: 30,
@@ -233,10 +231,6 @@ export default function ChefReelsPage() {
         <View style={styles.root}>
           {/* Profile Section */}
           <View style={styles.profileTop}>
-            <Image
-              source={{ uri: CHEF_PROFILE.avatar }}
-              style={styles.avatar}
-            />
             <TouchableOpacity style={styles.editBtn}>
               <Text style={styles.editText}>EDIT</Text>
             </TouchableOpacity>
@@ -329,7 +323,6 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#181818" },
   root: { flex: 1, backgroundColor: "#181818" },
   profileTop: { alignItems: "center", marginTop: 30, marginBottom: 16 },
-  avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 10 },
   editBtn: { position: "absolute", right: 26, top: 6 },
   editText: { color: "#FF934F", fontWeight: "bold", fontSize: 15 },
   name: { color: "#fff", fontSize: 22, fontWeight: "bold", marginTop: 6 },
