@@ -1,5 +1,6 @@
 import { RestrictedTabWrapper } from "@/components/RestrictedTabWrapper";
 import { AntDesign, Entypo, Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   FlatList,
@@ -48,11 +49,16 @@ const foodItems = [
 export default function DishesScreen() {
   const tabs = ["All", "Breakfast", "Lunch", "Dinner"];
   const [selectedTab, setSelectedTab] = useState("All");
+  const [showMenuId, setShowMenuId] = useState(null);
 
   const filteredItems =
     selectedTab === "All"
       ? foodItems
       : foodItems.filter((item) => item.category === selectedTab);
+
+  const toggleMenu = (id: any) => {
+    setShowMenuId(showMenuId === id ? null : id);
+  };
 
   return (
     <RestrictedTabWrapper>
@@ -100,11 +106,13 @@ export default function DishesScreen() {
                 <View style={styles.foodContent}>
                   <View style={styles.foodHeader}>
                     <Text style={styles.foodName}>{item.name}</Text>
-                    <Entypo
-                      name="dots-three-horizontal"
-                      size={21}
-                      color="#fff"
-                    />
+                    <TouchableOpacity onPress={() => toggleMenu(item.id)}>
+                      <Entypo
+                        name="dots-three-horizontal"
+                        size={16}
+                        color="#999"
+                      />
+                    </TouchableOpacity>
                   </View>
 
                   <View style={styles.item_price}>
@@ -125,6 +133,24 @@ export default function DishesScreen() {
                       </Text>
                     </View>
                     <Text style={styles.pickupText}>Pick UP</Text>
+
+                    {showMenuId === item.id && (
+                      <View style={styles.floatingMenu}>
+                        <TouchableOpacity style={styles.menuItem}>
+                          <Text style={styles.menuText}>Edit</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.menuItem}>
+                          <Text style={styles.menuText}>Show/Hide</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.menuItem, styles.lastMenuItem]}
+                        >
+                          <Text style={[styles.menuText, { color: "#ff4444" }]}>
+                            Delete
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                 </View>
               </View>
@@ -132,7 +158,10 @@ export default function DishesScreen() {
           />
 
           {/* Floating Add Button (unchanged as per your layout) */}
-          <TouchableOpacity style={styles.fab}>
+          <TouchableOpacity
+            style={styles.fab}
+            onPress={() => router.push("/add-dish")}
+          >
             <Ionicons name="add" size={28} color="#C67C4E" />
           </TouchableOpacity>
         </View>
@@ -280,5 +309,38 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,
+  },
+  floatingMenu: {
+    position: "absolute",
+    top: -40,
+    right: 0,
+    backgroundColor: "#333",
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 0,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 1000,
+    minWidth: 120,
+  },
+  menuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#555",
+  },
+  lastMenuItem: {
+    borderBottomWidth: 0,
+  },
+  menuText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "400",
   },
 });
