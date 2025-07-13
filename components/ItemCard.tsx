@@ -1,8 +1,8 @@
 // components/ItemCard.tsx
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useCart } from "../context/CartContext";
-import { useEffect, useState } from "react";
 
 export default function ItemCard({
   item,
@@ -59,21 +59,23 @@ export default function ItemCard({
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        onPress={() =>
-          addToCart({
-            id: item.id,
-            name: item.name,
-            price: item.price || 400,
-            image: item.imageUrl,
-            meal_type: item.cuisine,
-            quantity: 1,
-          })
-        }
-        style={styles.cartButton}
-      >
-        <Text style={styles.cartButtonText}>Add to Cart</Text>
-      </TouchableOpacity>
+      {type === "chef" && (
+        <TouchableOpacity
+          onPress={() =>
+            addToCart({
+              id: item.id,
+              name: item.name,
+              price: item.price || 400,
+              image: item.imageUrl,
+              meal_type: item.cuisine,
+              quantity: 1,
+            })
+          }
+          style={styles.cartButton}
+        >
+          <Text style={styles.cartButtonText}>Add to Cart</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState } from "react";
 
 type CartItem = {
@@ -8,6 +7,11 @@ type CartItem = {
   price: number;
   quantity: number;
   meal_type: string;
+  chef?: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
 };
 
 type CartContextType = {
@@ -25,7 +29,9 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const addToCart = (item: CartItem) => {
     setCart(prev =>
       prev.find(i => i.id === item.id)
-        ? prev.map(i => (i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i))
+        ? prev.map(i =>
+            i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i
+          )
         : [...prev, item]
     );
   };

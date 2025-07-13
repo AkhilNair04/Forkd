@@ -1,5 +1,6 @@
 import { ChefForDish, fetchChefsForDish } from "@/constants/fetchChefsForDish";
 import { Dish, fetchDishes } from "@/constants/fetchDishes";
+import { useCart } from "@/context/CartContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -25,9 +26,7 @@ export default function DishDetailScreen() {
     queryFn: fetchDishes,
   });
 
-  const { data: chefs = [], isLoading: isChefsLoading } = useQuery<
-    ChefForDish[]
-  >({
+  const { data: chefs = [], isLoading: isChefsLoading } = useQuery<ChefForDish[]>({
     queryKey: ["chefs-for-dish", dishIdString],
     queryFn: () => fetchChefsForDish(dishIdString),
   });
@@ -37,7 +36,9 @@ export default function DishDetailScreen() {
   const [quantity, setQuantity] = useState(1);
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedSort, setSelectedSort] = useState("Sort By:");
-  const [selectedChef, setSelectedChef] = useState<string | null>(null);
+  const [selectedChef, setSelectedChef] = useState<ChefForDish | null>(null);
+
+  const { addToCart } = useCart();
 
   const sortOptions = [
     "Ratings (high to low)",
@@ -46,13 +47,8 @@ export default function DishDetailScreen() {
     "Delivery Time",
   ];
 
-  if (isLoading) {
-    return <Text style={styles.error}>Loading dish...</Text>;
-  }
-
-  if (!dish) {
-    return <Text style={styles.error}>Dish not found</Text>;
-  }
+  if (isLoading) return <Text style={styles.error}>Loading dish...</Text>;
+  if (!dish) return <Text style={styles.error}>Dish not found</Text>;
 
   return (
     <>
@@ -141,22 +137,16 @@ export default function DishDetailScreen() {
             {/* Chefs List */}
             <FlatList
               data={chefs}
-              keyExtractor={(_, index) => index.toString()}
+              keyExtractor={(item) => item.id}
               scrollEnabled={false}
               renderItem={({ item }) => {
-                const isSelected = selectedChef === item.name;
+                const isSelected = selectedChef?.id === item.id;
                 return (
                   <TouchableOpacity
-                    onPress={() => setSelectedChef(item.name)}
-                    style={[
-                      styles.chefCard,
-                      isSelected && styles.selectedChefCard,
-                    ]}
+                    onPress={() => setSelectedChef(item)}
+                    style={[styles.chefCard, isSelected && styles.selectedChefCard]}
                   >
-                    <Image
-                      source={{ uri: item.avatar }}
-                      style={styles.avatar}
-                    />
+                    <Image source={{ uri: item.avatar }} style={styles.avatar} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.chefName}>{item.name}</Text>
                       <View style={styles.ratingPriceRow}>
@@ -167,16 +157,34 @@ export default function DishDetailScreen() {
                         </View>
                       </View>
                     </View>
-                    <Text style={styles.priceText}>
-                      ₹{item.price * quantity}
-                    </Text>
+                    <Text style={styles.priceText}>₹{item.price * quantity}</Text>
                   </TouchableOpacity>
                 );
               }}
             />
 
             {/* Order Button */}
-            <TouchableOpacity style={styles.orderButton}>
+            <TouchableOpacity
+              style={[styles.orderButton, { opacity: selectedChef ? 1 : 0.5 }]}
+              disabled={!selectedChef}
+              onPress={() => {
+                if (!selectedChef) return;
+
+                addToCart({
+                  id: `${dish.id}-${selectedChef.id}`,
+                  name: dish.title,
+                  price: selectedChef.price,
+                  image: dish.imageUrl,
+                  meal_type: dish.tags?.[0] || "N/A",
+                  quantity,
+                  chef: {
+                    id: selectedChef.id,
+                    name: selectedChef.name,
+                    avatar: selectedChef.avatar,
+                  },
+                });
+              }}
+            >
               <Text style={styles.orderButtonText}>Place Order</Text>
             </TouchableOpacity>
           </View>
