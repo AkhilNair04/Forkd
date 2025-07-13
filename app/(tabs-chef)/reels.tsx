@@ -4,6 +4,7 @@ import { ResizeMode, Video } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Modal,
@@ -284,23 +285,34 @@ export default function ChefReelsPage() {
       result = await ImagePicker.launchImageLibraryAsync(options);
     }
 
+    // Only proceed if user didn't cancel and we have a video
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
 
       // Check if it's a video
       if (asset.type === "video") {
+        console.log("🎥 Video selected, starting upload...");
+
         // Upload video to Supabase
         const uploadedUrl = await uploadVideoToSupabase(asset);
+
         if (uploadedUrl) {
+          console.log("✅ Upload successful, adding to grid");
           setUserImages((prev) => [...prev, uploadedUrl]);
+          setShowMediaModal(false); // Close modal only on successful upload
+        } else {
+          console.log("❌ Upload failed, keeping modal open");
+          // Don't close modal if upload failed - let user try again
         }
       } else {
-        // Handle images (if any)
-        setUserImages((prev) => [...prev, asset.uri]);
+        console.log("📸 Image selected (not supported for reels)");
+        Alert.alert("Invalid File", "Please select a video file for reels.");
+        // Don't close modal for invalid file type
       }
+    } else {
+      console.log("🚫 User cancelled video selection");
+      // Don't close modal if user cancelled - let them try again
     }
-
-    setShowMediaModal(false);
   };
 
   const renderGridItem = ({ item }: { item: any }) => {
@@ -398,37 +410,52 @@ export default function ChefReelsPage() {
             visible={showMediaModal}
             transparent
             animationType="slide"
-            onRequestClose={() => setShowMediaModal(false)}
+            onRequestClose={() => !uploading && setShowMediaModal(false)}
           >
             <View style={styles.modalOverlay}>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Add New Reel</Text>
-                <TouchableOpacity
-                  style={styles.modalOption}
-                  onPress={() => pickVideo("camera")}
-                  disabled={uploading}
-                >
-                  <Ionicons name="camera" size={24} color="#FF934F" />
-                  <Text style={styles.modalOptionText}>
-                    {uploading ? "Uploading..." : "Record Video"}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.modalOption}
-                  onPress={() => pickVideo("library")}
-                  disabled={uploading}
-                >
-                  <Ionicons name="videocam" size={24} color="#FF934F" />
-                  <Text style={styles.modalOptionText}>
-                    {uploading ? "Uploading..." : "Choose Video from Gallery"}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => setShowMediaModal(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
+                <Text style={styles.modalTitle}>
+                  {uploading ? "Uploading Reel..." : "Add New Reel"}
+                </Text>
+
+                {uploading ? (
+                  <View style={styles.uploadingContainer}>
+                    <ActivityIndicator size="large" color="#FF934F" />
+                    <Text style={styles.uploadingText}>
+                      Uploading your reel...
+                    </Text>
+                    <Text style={styles.uploadingSubtext}>
+                      Please wait, this may take a moment
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={styles.modalOption}
+                      onPress={() => pickVideo("camera")}
+                      disabled={uploading}
+                    >
+                      <Ionicons name="camera" size={24} color="#FF934F" />
+                      <Text style={styles.modalOptionText}>Record Video</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.modalOption}
+                      onPress={() => pickVideo("library")}
+                      disabled={uploading}
+                    >
+                      <Ionicons name="videocam" size={24} color="#FF934F" />
+                      <Text style={styles.modalOptionText}>
+                        Choose Video from Gallery
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      onPress={() => setShowMediaModal(false)}
+                    >
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             </View>
           </Modal>
@@ -522,5 +549,22 @@ const styles = StyleSheet.create({
     color: "#FF934F",
     fontSize: 16,
     fontWeight: "500",
+  },
+  uploadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  uploadingText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  uploadingSubtext: {
+    color: "#bbb",
+    fontSize: 14,
+    textAlign: "center",
   },
 });
