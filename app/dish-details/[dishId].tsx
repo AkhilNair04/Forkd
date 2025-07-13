@@ -185,7 +185,7 @@ export default function DishDetailScreen() {
                 });
               }}
             >
-              <Text style={styles.orderButtonText}>Place Order</Text>
+              <Text style={styles.orderButtonText}>Add to Cart</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

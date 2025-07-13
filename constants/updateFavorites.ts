@@ -10,9 +10,9 @@ export async function toggleFavoriteChef(
   isCurrentlyFavorite: boolean
 ) {
   const { data: userData, error } = await supabase
-    .from("User_Details")
+    .from("user_profiles")
     .select("fav_chef")
-    .eq("id", userId)
+    .eq("user_id", userId)
     .single();
 
   if (error || !userData) {
@@ -30,9 +30,9 @@ export async function toggleFavoriteChef(
   }
 
   const { error: updateError } = await supabase
-    .from("User_Details")
+    .from("user_profiles")
     .update({ fav_chef: updatedChefs })
-    .eq("id", userId);
+    .eq("user_id", userId);
 
   if (updateError) {
     console.error("Failed to update fav_dish array:", updateError);
@@ -48,9 +48,9 @@ export async function toggleFavoriteDish(
   isCurrentlyFavorite: boolean
 ) {
   const { data: userData, error } = await supabase
-    .from("User_Details")
+    .from("user_profiles")
     .select("fav_dish")
-    .eq("id", userId)
+    .eq("user_id", userId)
     .single();
 
   if (error || !userData) {
@@ -67,9 +67,9 @@ export async function toggleFavoriteDish(
   }
 
   const { error: updateError } = await supabase
-    .from("User_Details")
+    .from("user_profiles")
     .update({ fav_dish: updatedDishes })
-    .eq("id", userId);
+    .eq("user_id", userId);
 
   if (updateError) {
     console.error("Failed to update fav_dish array:", updateError);

@@ -6,13 +6,15 @@ import SearchBarWithFilter from "@/components/SearchBarWithFilter";
 import SkeletonCard from "@/components/SkeletonCard";
 import { fetchChefs } from "@/constants/fetchChefs";
 import { fetchFavoriteChefs } from "@/constants/fetchFavoriteChefs";
+import { useUserId } from "@/constants/getUserId";
 import { toggleFavoriteChef } from "@/constants/updateFavorites";
+import { useLocation } from "@/context/LocationContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FlatList, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocation } from "@/context/LocationContext";
 
 export default function ChefScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -21,9 +23,12 @@ export default function ChefScreen() {
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
-  const userId = "1";
+
+  const userId = useUserId();
+  console.log(userId);
+
   const { location } = useLocation();
-  const selectedAddress = location?.address || 'Pick your location';
+  const selectedAddress = location?.address || "Pick your location";
 
   const queryClient = useQueryClient();
 
@@ -34,7 +39,8 @@ export default function ChefScreen() {
 
   const { data: favoriteChefs = [] } = useQuery({
     queryKey: ["favoriteChefs", userId],
-    queryFn: () => fetchFavoriteChefs(userId),
+    queryFn: async () => fetchFavoriteChefs(userId!),
+     enabled: !!userId,
   });
 
   const filteredChefs = chefs.filter((chef) => {
@@ -75,6 +81,7 @@ export default function ChefScreen() {
   });
 
   const handleToggleFavorite = async (id: string, isCurrentlyFav: boolean) => {
+    if(!userId)return;
     await toggleFavoriteChef(userId, id, isCurrentlyFav);
     await queryClient.invalidateQueries({
       queryKey: ["favoriteChefs", userId],
