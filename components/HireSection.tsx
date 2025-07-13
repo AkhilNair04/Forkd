@@ -22,8 +22,6 @@ export default function HireSection({ note, setNote, onHire }: HireSectionProps)
         onChangeText={setNote}
         placeholder="Add any special instructions for the chef..."
         placeholderTextColor="#999"
-        multiline
-        numberOfLines={4}
         style={styles.noteInput}
       />
 

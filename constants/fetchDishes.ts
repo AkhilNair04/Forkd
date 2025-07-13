@@ -21,7 +21,7 @@ export async function fetchDishes(): Promise<Dish[]> {
   const { data, error } = await supabase
     .from("Dish")
     .select(
-      "id, title, description, ingredients, tags, is_available, is_veg, cuisine,rating_avg,reviews,allergies"
+      "id, title, description, ingredients, tags, is_available, is_veg, cuisine,rating_avg,reviews,contains"
     );
 
   if (error || !data) {
@@ -45,7 +45,7 @@ export async function fetchDishes(): Promise<Dish[]> {
       ...dish,
       rating:dish.rating_avg,
       reviews:dish.reviews,
-      allergies:dish.allergies,
+      allergies:dish.contains,
       tags: parsedTags,
       imageUrl: publicUrlData?.publicUrl || "",
     };

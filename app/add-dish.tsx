@@ -21,7 +21,11 @@ export default function AddDishScreen() {
   const [selectedCategory, setSelectedCategory] = useState("Dinner");
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [cuisine, setCuisine] = useState("");
   const [ingredients, setIngredients] = useState("");
+  const [description, setDescription] = useState("");
+  const [contains, setContains] = useState("");
+
   const [image, setImage] = useState<string | null>(null);
 
   const pickImage = async () => {
@@ -50,7 +54,10 @@ export default function AddDishScreen() {
       price.trim() &&
       quantity > 0 &&
       image &&
-      ingredients.trim()
+      ingredients.trim() &&
+      cuisine.trim() &&
+      description.trim() &&
+      contains.trim()
   );
 
   const handleAddDish = () => {
@@ -61,6 +68,10 @@ export default function AddDishScreen() {
       price,
       quantity,
       image,
+      cuisine,
+      ingredients,
+      description,
+      contains
     });
     alert("Dish Added!");
   };
@@ -72,6 +83,9 @@ export default function AddDishScreen() {
     setQuantity(1);
     setImage(null);
     setIngredients("");
+    setContains("");
+    setCuisine("");
+    setDescription("");
     console.log("Form reset to initial state");
   };
 
@@ -180,6 +194,16 @@ export default function AddDishScreen() {
               </View>
             </View>
 
+            <Text style={styles.label}>CUISINE</Text>
+            <TextInput
+              style={[styles.ingredient_input, { height: 50 }]}
+              value={cuisine}
+              onChangeText={setCuisine}
+              multiline
+              placeholder="Enter cuisine"
+              placeholderTextColor="#888"
+            />
+
             {/* Ingredients */}
             <Text style={styles.label}>INGREDIENTS</Text>
             <TextInput
@@ -188,6 +212,26 @@ export default function AddDishScreen() {
               onChangeText={setIngredients}
               multiline
               placeholder="Enter ingredients"
+              placeholderTextColor="#888"
+            />
+
+            <Text style={styles.label}>DESCRIPTION</Text>
+            <TextInput
+              style={styles.ingredient_input}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              placeholder="Enter description"
+              placeholderTextColor="#888"
+            />
+
+            <Text style={styles.label}>CONTAINS</Text>
+            <TextInput
+              style={[styles.ingredient_input, { marginBottom: 200 }]}
+              value={contains}
+              onChangeText={setContains}
+              multiline
+              placeholder="Enter description"
               placeholderTextColor="#888"
             />
           </ScrollView>
@@ -255,7 +299,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     color: "#fff",
-    marginBottom: 100,
+    marginBottom: 15,
     borderWidth: 1,
     borderColor: "#fff",
     height: 100,
