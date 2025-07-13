@@ -1,7 +1,7 @@
 // app/(tabs-chef)/profile.tsx
 import { RestrictedTabWrapper } from "@/components/RestrictedTabWrapper";
 import { useChefRestriction } from "@/context/ChefRestrictionContext";
-import { supabase } from "@/lib/supabase"; // Replace with your Supabase import path
+import { supabase } from "@/constants/supabase"; // Replace with your Supabase import path
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
