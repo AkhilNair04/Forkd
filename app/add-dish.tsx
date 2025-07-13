@@ -1,7 +1,9 @@
-import { AntDesign, Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { router, Stack } from "expo-router";
+import { AntDesign, Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { Stack, router } from "expo-router";
 import { useState } from "react";
 import {
+  Image,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -13,142 +15,195 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const categories = ["Breakfast", "Lunch", "Dinner"];
-const ingredients = [
-  { name: "Salt", icon: "salt" },
-  { name: "Chicken", icon: "drumstick-bite" },
-  { name: "Onion", icon: "circle" },
-  { name: "Garlic", icon: "close" },
-  { name: "Peppers", icon: "fire" },
-  { name: "Ginger", icon: "bolt" },
-];
 
 export default function AddDishScreen() {
-  const [itemName, setItemName] = useState("Palak Paneer");
+  const [itemName, setItemName] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Dinner");
-  const [price, setPrice] = useState("240");
-  const [quantity, setQuantity] = useState(2);
-  const [image, setImage] = useState(
-    "https://images.unsplash.com/photo-1601050690597-4a7a423a9f20"
+  const [price, setPrice] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [ingredients, setIngredients] = useState("");
+  const [image, setImage] = useState<string | null>(null);
+
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: "images",
+        allowsEditing: true,
+        quality: 1,
+        aspect: [4, 3],
+      });
+
+      if (!result.canceled && result.assets?.length > 0) {
+        console.log("Image selected:", result.assets[0].uri);
+        setImage(result.assets[0].uri);
+      } else {
+        console.log("Image selection cancelled.");
+      }
+    } catch (err) {
+      console.error("Error in pickImage:", err);
+    }
+  };
+
+  const isFormValid = Boolean(
+    itemName.trim() &&
+      selectedCategory &&
+      price.trim() &&
+      quantity > 0 &&
+      image &&
+      ingredients.trim()
   );
+
+  const handleAddDish = () => {
+    console.log("Button clicked");
+    console.log({
+      itemName,
+      selectedCategory,
+      price,
+      quantity,
+      image,
+    });
+    alert("Dish Added!");
+  };
+
+  const handleReset = () => {
+    setItemName("");
+    setSelectedCategory("Dinner");
+    setPrice("");
+    setQuantity(1);
+    setImage(null);
+    setIngredients("");
+    console.log("Form reset to initial state");
+  };
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={{ flex: 1, backgroundColor: "#111" }}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
-        <ScrollView style={styles.container}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={{ display: "flex", flexDirection: "row" }}>
-              <TouchableOpacity
-                style={styles.roundBackButton}
-                onPress={() => router.back()}
-              >
-                <Ionicons name="chevron-back" size={20} color="#000" />
+        <View style={{ flex: 1 }}>
+          <ScrollView style={styles.container}>
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={{ flexDirection: "row" }}>
+                <TouchableOpacity
+                  style={styles.roundBackButton}
+                  onPress={() => router.back()}
+                >
+                  <Ionicons name="chevron-back" size={20} color="#000" />
+                </TouchableOpacity>
+                <Text style={styles.title}>Add New Items</Text>
+              </View>
+              <TouchableOpacity onPress={handleReset}>
+                <Text style={styles.reset}>RESET</Text>
               </TouchableOpacity>
-              <Text style={styles.title}>Add New Items</Text>
             </View>
-            <TouchableOpacity>
-              <Text style={styles.reset}>RESET</Text>
-            </TouchableOpacity>
-          </View>
 
-          {/* Item Name */}
-          <Text style={styles.label}>ITEM NAME</Text>
-          <TextInput
-            style={styles.input}
-            value={itemName}
-            onChangeText={setItemName}
-            placeholder="Enter item name"
-            placeholderTextColor="#888"
-          />
+            {/* Item Name */}
+            <Text style={styles.label}>ITEM NAME</Text>
+            <TextInput
+              style={styles.input}
+              value={itemName}
+              onChangeText={setItemName}
+              placeholder="Enter item name"
+              placeholderTextColor="#888"
+            />
 
-          {/* Upload Photo/Video */}
-          <Text style={styles.label}>UPLOAD PHOTO/VIDEO</Text>
-          <View style={styles.uploadRow}>
-            <TouchableOpacity style={styles.addBox}>
-              <Ionicons name="cloud-upload" size={24} color="#C67C4E" />
-              <Text style={styles.addText}>Add</Text>
-            </TouchableOpacity>
-          </View>
+            {/* Upload Photo/Video */}
+            <Text style={styles.label}>UPLOAD PHOTO</Text>
+            <View style={styles.uploadRow}>
+              {image && (
+                <Image
+                  source={{ uri: image }}
+                  style={{
+                    width: 100,
+                    height: 100,
+                    borderRadius: 12,
+                    marginRight: 10,
+                  }}
+                />
+              )}
+              <TouchableOpacity style={styles.addBox} onPress={pickImage}>
+                <Ionicons name="cloud-upload" size={24} color="#C67C4E" />
+                <Text style={styles.addText}>Add</Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Category */}
-          <View style={styles.chipRow}>
-            {categories.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                onPress={() => setSelectedCategory(cat)}
-                style={[
-                  styles.chip,
-                  selectedCategory === cat && styles.chipSelected,
-                ]}
-              >
-                <Text
+            {/* Category */}
+            <View style={styles.chipRow}>
+              {categories.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  onPress={() => setSelectedCategory(cat)}
                   style={[
-                    styles.chipText,
-                    selectedCategory === cat && styles.chipTextSelected,
+                    styles.chip,
+                    selectedCategory === cat && styles.chipSelected,
                   ]}
                 >
-                  {cat}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Price and Quantity */}
-          <View style={styles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>PRICE</Text>
-              <TextInput
-                style={styles.input}
-                value={`Rs. ${price}`}
-                onChangeText={(val) => setPrice(val.replace("Rs. ", ""))}
-                keyboardType="numeric"
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>QUANTITY</Text>
-              <View style={styles.quantityBox}>
-                <TouchableOpacity
-                  onPress={() => setQuantity(Math.max(1, quantity - 1))}
-                >
-                  <AntDesign name="minuscircleo" size={24} color="#fff" />
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selectedCategory === cat && styles.chipTextSelected,
+                    ]}
+                  >
+                    {cat}
+                  </Text>
                 </TouchableOpacity>
-                <Text style={styles.quantity}>{quantity}</Text>
-                <TouchableOpacity onPress={() => setQuantity(quantity + 1)}>
-                  <AntDesign name="pluscircleo" size={24} color="#fff" />
-                </TouchableOpacity>
-              </View>
+              ))}
             </View>
-          </View>
 
-          {/* Ingredients */}
-          <Text style={styles.label}>INGREDIENTS</Text>
-          <View style={styles.ingredientRow}>
-            {ingredients.map((ing, index) => (
-              <View key={index} style={styles.ingredientCard}>
-                <MaterialIcons
-                  name="restaurant-menu"
-                  size={24}
-                  color="#C67C4E"
+            {/* Price and Quantity */}
+            <View style={styles.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>PRICE</Text>
+                <TextInput
+                  style={styles.input}
+                  value={price}
+                  onChangeText={setPrice}
+                  keyboardType="numeric"
+                  placeholder="Enter price"
+                  placeholderTextColor="#888"
                 />
-                <Text style={styles.ingredientText}>{ing.name}</Text>
               </View>
-            ))}
-          </View>
+              <View style={{ flex: 1, alignItems: "center" }}>
+                <Text style={styles.label}>QUANTITY</Text>
+                <View style={styles.quantityBox}>
+                  <TouchableOpacity
+                    onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                  >
+                    <AntDesign name="minuscircleo" size={24} color="#fff" />
+                  </TouchableOpacity>
+                  <Text style={styles.quantity}>{quantity}</Text>
+                  <TouchableOpacity onPress={() => setQuantity(quantity + 1)}>
+                    <AntDesign name="pluscircleo" size={24} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
 
-          {/* Optional: Highlighted Ingredients */}
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              marginTop: 8,
-            }}
-          >
-            <Text style={styles.label}>Highlighted Ingredients</Text>
-            <Text style={[styles.label, { color: "#C67C4E" }]}>See All</Text>
+            {/* Ingredients */}
+            <Text style={styles.label}>INGREDIENTS</Text>
+            <TextInput
+              style={styles.ingredient_input}
+              value={ingredients}
+              onChangeText={setIngredients}
+              multiline
+              placeholder="Enter ingredients"
+              placeholderTextColor="#888"
+            />
+          </ScrollView>
+
+          {/* Fixed Footer Add Dish Button */}
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={[styles.addButton, { opacity: isFormValid ? 1 : 0.5 }]}
+              disabled={!isFormValid}
+              onPress={handleAddDish}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.addButtonText}>Add Dish</Text>
+            </TouchableOpacity>
           </View>
-        </ScrollView>
+        </View>
       </SafeAreaView>
     </>
   );
@@ -195,6 +250,17 @@ const styles = StyleSheet.create({
     borderColor: "#fff",
     height: 50,
   },
+  ingredient_input: {
+    backgroundColor: "#3a3a3aff",
+    borderRadius: 8,
+    padding: 12,
+    color: "#fff",
+    marginBottom: 100,
+    borderWidth: 1,
+    borderColor: "#fff",
+    height: 100,
+    textAlignVertical: "top",
+  },
   uploadRow: {
     flexDirection: "row",
     marginBottom: 16,
@@ -202,7 +268,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   addBox: {
-    width: "100%",
+    flex: 1,
     height: 100,
     borderRadius: 16,
     borderWidth: 1,
@@ -211,7 +277,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#222",
-    marginTop: 10,
   },
   addText: {
     color: "#C67C4E",
@@ -254,26 +319,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
   },
-  ingredientRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 8,
-  },
-  ingredientCard: {
-    backgroundColor: "#222",
-    padding: 10,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    width: 80,
-  },
-  ingredientText: {
-    color: "#fff",
-    fontSize: 12,
-    marginTop: 6,
-    textAlign: "center",
-  },
   roundBackButton: {
     width: 36,
     height: 36,
@@ -282,5 +327,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
+  },
+  footer: {
+    position: "absolute",
+    bottom: 0,
+    width: "100%",
+    padding: 16,
+    backgroundColor: "#000",
+    borderTopWidth: 1,
+    borderTopColor: "#333",
+  },
+  addButton: {
+    backgroundColor: "#C67C4E",
+    paddingVertical: 14,
+    borderRadius: 30,
+    alignItems: "center",
+  },
+  addButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
   },
 });

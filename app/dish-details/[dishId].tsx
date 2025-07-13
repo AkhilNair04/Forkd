@@ -3,7 +3,7 @@ import { Dish, fetchDishes } from "@/constants/fetchDishes";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   FlatList,
   Image,
@@ -24,7 +24,6 @@ export default function DishDetailScreen() {
     queryKey: ["dishes"],
     queryFn: fetchDishes,
   });
-
 
   const { data: chefs = [], isLoading: isChefsLoading } = useQuery<
     ChefForDish[]
