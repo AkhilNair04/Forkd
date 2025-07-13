@@ -2,6 +2,7 @@ import HireSection from "@/components/HireSection";
 import ScheduleDatePicker from "@/components/ScheduleDatePicker";
 import TimeSelector from "@/components/TimeSelector";
 import { Chef, fetchChefs } from "@/constants/fetchChefs";
+import { supabase } from "@/constants/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -24,10 +25,8 @@ export default function ChefDetails() {
     queryKey: ["chefs"],
     queryFn: fetchChefs,
   });
-  
 
   const chef: Chef | undefined = chefs.find((c) => c.id === chefId);
-  
 
   const [showTooltip, setShowTooltip] = useState(false);
   const [selectedDay, setSelectedDay] = useState(0);
@@ -56,8 +55,52 @@ export default function ChefDetails() {
 
   const upcomingDays = getUpcomingDays();
 
-  const handleHireChef = () => {
-    console.log("Hired with note:", note);
+  
+  const handleHireChef = async() => {
+    try {
+    // Get the logged-in user's ID
+    const { data: userData, error: authError } = await supabase.auth.getUser();
+    if (authError || !userData?.user) {
+      console.error("User not authenticated");
+      return;
+    }
+
+    const userId = userData.user.id || "ae89e1e6-e013-45c1-8841-60f40c618110";
+
+    // Validate inputs
+    if (!chefId || !startTime || !hours || selectedDay === null) {
+      console.warn("Please fill all required fields");
+      return;
+    }
+
+    // Get selected date
+    const scheduledDate = upcomingDays[selectedDay]?.fullDate;
+    if (!scheduledDate) {
+      console.warn("Invalid date selected");
+      return;
+    }
+
+    // Insert into Hire_Chef table
+    const { error: insertError } = await supabase.from("hire_chef").insert([
+      {
+        user_id: userId,
+        chef_id: chefId,
+        scheduled_date: scheduledDate.toISOString().split("T")[0], // format: YYYY-MM-DD
+        start_time: startTime,
+        hours,
+        note: note.trim(),
+      },
+    ]);
+
+    if (insertError) {
+      console.error("Error inserting data:", insertError);
+    } else {
+      console.log("Chef hired successfully!");
+      router.push("/confirmation"); // Or show a toast/modal
+    }
+  } catch (err) {
+    console.error("Unexpected error:", err);
+  }
   };
 
   if (!chef) {
@@ -154,7 +197,6 @@ export default function ChefDetails() {
               />
 
               <TimeSelector
-                times={chef.available_times}
                 selectedTimes={selectedTimes}
                 setSelectedTimes={setSelectedTimes}
                 startTime={startTime}
@@ -179,7 +221,6 @@ export default function ChefDetails() {
 }
 
 // ✅ styles remain unchanged
-
 
 const styles = StyleSheet.create({
   container: {

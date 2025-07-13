@@ -1,30 +1,66 @@
 import { supabase } from "./supabase";
 
-export async function fetchDishesByChef(chefId: string) {
-  const { data, error } = await supabase
-    .from("Dish_To_Chef")
-    .select("dish_price, dish_id, Dish(*)")
-    .eq("chef_id", chefId);
-
-  if (error) {
-    console.error("Error fetching dishes for chef:", error.message);
+export async function fetchDishesByChef(uuid: string | null | undefined) {
+  if (!uuid) {
+    console.warn("UUID is null or undefined. Cannot fetch chef dishes.");
     return [];
   }
-  console.log(data);
 
-  return data.map((entry) => {
-    const dish = Array.isArray(entry.Dish) ? entry.Dish[0] : entry.Dish;
-    const imagePath = `${dish?.id}/dish.jpg`;
+  // Step 1: Get Chef ID using uuid
+  const { data: chefData, error: chefError } = await supabase
+    .from("Chef")
+    .select("id")
+    .eq("uuid", uuid)
+    .maybeSingle();
 
-    const { data: imageUrlData } = supabase.storage
-      .from("dish")
-      .getPublicUrl(imagePath);
+  if (chefError || !chefData) {
+    console.error(
+      "Error fetching chef ID:",
+      chefError?.message || "Chef not found"
+    );
+    return [];
+  }
 
-    return {
-      ...dish,
-      id: entry.dish_id,
-      price: entry.dish_price,
-      imageUrl: imageUrlData?.publicUrl ?? "",
-    };
-  });
+  const chefId = chefData.id;
+
+  // Step 2: Get all dishes linked to that chef
+  const { data: linkData, error: linkError } = await supabase
+    .from("Dish_To_Chef")
+    .select("dish_id, dish_price")
+    .eq("chef_id", chefId);
+
+  if (linkError) {
+    console.error("Error fetching dishes for chef:", linkError.message);
+    return [];
+  }
+
+  // Step 3: Get dish details in parallel using their IDs
+  const dishesWithPrices = await Promise.all(
+    linkData.map(async (entry) => {
+      const { data: dishData, error: dishError } = await supabase
+        .from("Dish")
+        .select("*")
+        .eq("id", entry.dish_id)
+        .maybeSingle(); // each dish_id is unique
+
+      if (dishError || !dishData) {
+        console.warn(`Dish not found for ID: ${entry.dish_id}`);
+        return null;
+      }
+
+      const imagePath = `${dishData.id}/dish.jpg`;
+      const { data: imageUrlData } = supabase.storage
+        .from("dish")
+        .getPublicUrl(imagePath);
+
+      return {
+        ...dishData,
+        price: entry.dish_price,
+        imageUrl: imageUrlData?.publicUrl ?? "",
+      };
+    })
+  );
+
+  // Filter out any null (failed) fetches
+  return dishesWithPrices.filter(Boolean);
 }

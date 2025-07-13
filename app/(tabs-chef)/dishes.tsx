@@ -23,7 +23,7 @@ export default function DishesScreen() {
   const [showMenuId, setShowMenuId] = useState<string | null>(null);
 
   const chefId = useUserId();
-  console.log(chefId);
+  console.log("userId at chef-tabs :",chefId);
 
   const { data: dishes = [] } = useQuery({
     queryKey: ["chefDishes", chefId],
@@ -31,11 +31,17 @@ export default function DishesScreen() {
     enabled: !!chefId,
   });
 
+  console.log(dishes);
+
   const filteredItems =
     selectedTab === "All"
       ? dishes
-      : dishes.filter((item) => item.tags === selectedTab);
-
+      : dishes.filter((item) => {
+          const itemTags = item.tags
+            ?.split(",")
+            .map((tag: string) => tag.trim().toLowerCase());
+          return itemTags?.includes(selectedTab.toLowerCase());
+        });
   const toggleMenu = (id: string) => {
     setShowMenuId((prev) => (prev === id ? null : id));
   };
@@ -45,7 +51,7 @@ export default function DishesScreen() {
       <SafeAreaView style={{ flex: 1, backgroundColor: "#111" }}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
         <View style={styles.container}>
-          <Text style={styles.title}>My Food List</Text>
+          <Text style={styles.title}>Menu</Text>
 
           {/* Tabs */}
           <View style={styles.tabContainer}>
@@ -99,7 +105,14 @@ export default function DishesScreen() {
 
                   <View style={styles.item_price}>
                     <View style={styles.categoryTag}>
-                      <Text style={styles.categoryText}>{item.tags}</Text>
+                      <Text style={styles.categoryText}>
+                        {item.tags
+                          ?.split(",")
+                          .map((tag: string) => tag.trim())
+                          .find((tag: string) =>
+                            ["Breakfast", "Lunch", "Dinner"].includes(tag)
+                          ) ?? ""}
+                      </Text>
                     </View>
                     <Text style={styles.price}>Rs. {item.price}</Text>
                   </View>
@@ -108,15 +121,13 @@ export default function DishesScreen() {
                     <View style={styles.ratingRow}>
                       <AntDesign name="star" size={16} color="#C67C4E" />
                       <Text style={styles.ratingText}>
-                        {item.rating_avg?.toFixed(1) ?? "N/A"}{" "}
+                        {item.rating_avg||"N/A"}
                         <Text style={styles.reviewText}>
                           ({item.reviews ?? 0} Review)
                         </Text>
                       </Text>
                     </View>
-                    <Text style={styles.pickupText}>
-                      {item.is_available ? "Pick UP" : "Unavailable"}
-                    </Text>
+                    <Text style={styles.pickupText}>Pick UP</Text>
 
                     {showMenuId === item.id && (
                       <View style={styles.floatingMenu}>
