@@ -1,18 +1,19 @@
 import { supabase } from "./supabase";
 
 export async function fetchFavoriteChefs(userId: string) {
+
+  console.log("fetchFavChef:",userId);
   // Step 1: Get the user's favorite chef IDs
   const { data: userData, error: userError } = await supabase
-    .from("User_Details")
+    .from("user_profiles")
     .select("fav_chef")
-    .eq("id", userId)
+    .eq("user_id", userId)
     .single();
 
   if (userError || !userData) {
-    console.error("Error fetching user details:", userError?.message);
+    console.error("Error fetching user chef details:", userError?.message);
     return [];
   }
-
   const chefIds = userData.fav_chef ?? [];
   console.log(chefIds)
 

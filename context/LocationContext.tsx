@@ -65,7 +65,7 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
         const defaultLocation = {
           latitude: 37.78825,
           longitude: -122.4324,
-          address: '1234 Culinary Street, Flavor...',
+          address: 'Pick your location',
         };
         setLocation(defaultLocation);
         return;
@@ -82,7 +82,7 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
 
       // Get address from coordinates
       const addresses = await Location.reverseGeocodeAsync(coords);
-      let formattedAddress = '1234 Culinary Street, Flavor...';
+      let formattedAddress = 'Pick your location';
       
       if (addresses.length > 0) {
         const addr = addresses[0];
@@ -109,7 +109,7 @@ export const LocationProvider: React.FC<LocationProviderProps> = ({ children }) 
       const defaultLocation = {
         latitude: 37.78825,
         longitude: -122.4324,
-        address: '1234 Culinary Street, Flavor...',
+        address: 'Pick your location',
       };
       setLocation(defaultLocation);
     }

@@ -3,13 +3,13 @@ import { supabase } from "./supabase";
 export async function fetchFavoriteDishes(userId: string) {
   // Step 1: Get the user's favorite dish IDs
   const { data: userData, error: userError } = await supabase
-    .from("User_Details")
+    .from("user_profiles")
     .select("fav_dish")
-    .eq("id", userId)
+    .eq("user_id", userId)
     .single();
 
   if (userError || !userData) {
-    console.error("Error fetching user details:", userError?.message);
+    console.error("Error fetching user dish details:", userError?.message);
     return [];
   }
 

@@ -8,6 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/constants/supabase';
+import { ReferralService } from '@/services/ReferralService';
 
 interface PasswordStrength {
   score: number;
@@ -69,6 +70,42 @@ const isCommonPassword = (password: string): boolean => {
   return commonPasswords.includes(password.toLowerCase());
 };
 
+const processReferralCode = async (code: string, newUserId: string | undefined) => {
+  try {
+    if (!newUserId) return;
+
+    // Validate referral code using service
+    const isValid = await ReferralService.validateReferralCode(code);
+    if (!isValid) {
+      Alert.alert('Invalid Code', 'The referral code you entered is not valid.');
+      return;
+    }
+
+    // Process referral using service
+    const success = await ReferralService.processNewUserReferral(code, newUserId);
+    
+    if (success) {
+      // Show success message
+      Alert.alert(
+        'Referral Applied!',
+        'Congratulations! You\'ve received ₹100 off your first order. Check your rewards in the app!',
+        [{ text: 'Great!', style: 'default' }]
+      );
+    } else {
+      // Fallback error message
+      Alert.alert(
+        'Error',
+        'Failed to process referral code. Please try again.',
+        [{ text: 'OK', style: 'default' }]
+      );
+    }
+    
+  } catch (error) {
+    console.error('Error processing referral code:', error);
+    Alert.alert('Error', 'Failed to process referral code. Please try again.');
+  }
+};
+
 export default function SignUpEmailScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -81,6 +118,8 @@ export default function SignUpEmailScreen() {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmError, setConfirmError] = useState('');
+  const [showReferralInput, setShowReferralInput] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -196,6 +235,11 @@ export default function SignUpEmailScreen() {
         .upsert({
           user_id: userId,
         });
+
+      // Process referral code if provided
+      if (referralCode.trim()) {
+        await processReferralCode(referralCode.trim(), data.user?.id);
+      }
 
       // Route immediately to email-confirm
       router.replace('/(onboarding-customers)/kyc_landing_accept');
@@ -382,6 +426,38 @@ export default function SignUpEmailScreen() {
           </View>
           {confirmError ? <Text style={styles.errorText}>{confirmError}</Text> : null}
 
+          {/* Referral Code Section */}
+          <TouchableOpacity 
+            style={styles.referralToggle}
+            onPress={() => setShowReferralInput(!showReferralInput)}
+          >
+            <Text style={styles.referralToggleText}>
+              Have a referral code? 
+            </Text>
+            <Feather 
+              name={showReferralInput ? 'chevron-up' : 'chevron-down'} 
+              size={16} 
+              color="#C67C4E" 
+            />
+          </TouchableOpacity>
+
+          {showReferralInput && (
+            <View style={styles.referralContainer}>
+              <Text style={styles.label}>REFERRAL CODE (OPTIONAL)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter referral code"
+                placeholderTextColor="#999"
+                autoCapitalize="characters"
+                value={referralCode}
+                onChangeText={setReferralCode}
+              />
+              <Text style={styles.referralBenefit}>
+                🎉 Get ₹100 off your first order!
+              </Text>
+            </View>
+          )}
+
           <TouchableOpacity
             style={[
               styles.signUpButton,
@@ -493,5 +569,31 @@ const styles = StyleSheet.create({
   },
   requirementMet: {
     color: '#00CC44',
+  },
+  
+  // Referral Code Styles
+  referralToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    marginBottom: 10,
+    padding: 12,
+  },
+  referralToggleText: {
+    color: '#C67C4E',
+    fontSize: 16,
+    marginRight: 8,
+  },
+  referralContainer: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  referralBenefit: {
+    color: '#00CC44',
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -42,15 +42,39 @@ export default function LocationPicker({
     }
   );
   const [loading, setLoading] = useState(true);
-  const [address, setAddress] = useState('');
+  const [address, setAddress] = useState('Pick your location');
+  const [gettingCurrentLocation, setGettingCurrentLocation] = useState(false);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: initialLocation?.latitude || 37.78825,
+    longitude: initialLocation?.longitude || -122.4324,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
+  });
+  const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
-    getCurrentLocation();
+    getCurrentLocation(true);
   }, []);
 
-  const getCurrentLocation = async () => {
+  // Ensure marker coordinates stay in sync with selected location
+  useEffect(() => {
+    console.log('Selected location changed to:', selectedLocation);
+  }, [selectedLocation]);
+
+  // Debug API key
+  useEffect(() => {
+    console.log('Google Maps API Key available:', !!process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY);
+  }, []);
+
+  const getCurrentLocation = async (isInitialLoad = false) => {
     try {
-      setLoading(true);
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setGettingCurrentLocation(true);
+      }
+      
+      console.log('Getting current location...');
       const { status } = await Location.requestForegroundPermissionsAsync();
       
       if (status !== 'granted') {
@@ -59,7 +83,11 @@ export default function LocationPicker({
           'Please enable location permissions to use this feature.',
           [{ text: 'OK' }]
         );
-        setLoading(false);
+        if (isInitialLoad) {
+          setLoading(false);
+        } else {
+          setGettingCurrentLocation(false);
+        }
         return;
       }
 
@@ -72,23 +100,55 @@ export default function LocationPicker({
         longitude: location.coords.longitude,
       };
 
+      console.log('Current location obtained:', newLocation);
+      
+      // Update location first
       setSelectedLocation(newLocation);
+      
+      // Update map region
+      setMapRegion({
+        ...newLocation,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
+      
+      // Get address for the new location
       await getAddressFromCoordinates(newLocation);
-      setLoading(false);
+      
+      if (isInitialLoad) {
+        setLoading(false);
+      } else {
+        setGettingCurrentLocation(false);
+      }
     } catch (error) {
       console.error('Error getting current location:', error);
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      } else {
+        setGettingCurrentLocation(false);
+      }
       Alert.alert('Error', 'Unable to get your current location. Please try again.');
     }
   };
 
   const getAddressFromCoordinates = async (coords: { latitude: number; longitude: number }) => {
     try {
+      console.log('Getting address for coordinates:', coords);
+      
+      // Add a small delay to avoid rapid calls
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       const addresses = await Location.reverseGeocodeAsync(coords);
+      console.log('Reverse geocode result:', addresses);
+      
       if (addresses.length > 0) {
         const addr = addresses[0];
         const formattedAddress = `${addr.street || ''} ${addr.streetNumber || ''}, ${addr.city || ''}, ${addr.region || ''} ${addr.postalCode || ''}`.trim();
+        console.log('Setting address to:', formattedAddress);
         setAddress(formattedAddress || 'Unknown Address');
+      } else {
+        console.log('No addresses found');
+        setAddress('No address found');
       }
     } catch (error) {
       console.error('Error getting address:', error);
@@ -97,7 +157,10 @@ export default function LocationPicker({
   };
 
   const handleMapPress = async (event: any) => {
+    console.log('🗺️ MAP PRESS EVENT FIRED!');
+    console.log('Map pressed, getting coordinates...');
     const coordinate = event.nativeEvent.coordinate;
+    console.log('New coordinates from map press:', coordinate);
     setSelectedLocation(coordinate);
     await getAddressFromCoordinates(coordinate);
   };
@@ -155,25 +218,37 @@ export default function LocationPicker({
 
       {/* Map */}
       <MapView
+        ref={mapRef}
         style={styles.map}
-        provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-        initialRegion={{
-          ...selectedLocation,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }}
+        initialRegion={mapRegion}
         onPress={handleMapPress}
+        onRegionChangeComplete={(region) => {
+          console.log('Map region changed to:', region);
+          setMapRegion(region);
+        }}
         showsUserLocation={true}
         showsMyLocationButton={false}
-        customMapStyle={mapStyle}
+        showsCompass={true}
+        showsBuildings={true}
+        showsIndoors={true}
+        mapType="standard"
+        loadingEnabled={true}
+        loadingIndicatorColor="#C67C4E"
+        loadingBackgroundColor="#ffffff"
+        onMapReady={() => {
+          console.log('Map is ready!');
+        }}
       >
         <Marker
           coordinate={selectedLocation}
           draggable
-          onDragEnd={(event) => {
+          onDragEnd={async (event) => {
+            console.log('🎯 MARKER DRAG EVENT FIRED!');
+            console.log('Marker dragged, getting new coordinates...');
             const coordinate = event.nativeEvent.coordinate;
+            console.log('New coordinates from marker drag:', coordinate);
             setSelectedLocation(coordinate);
-            getAddressFromCoordinates(coordinate);
+            await getAddressFromCoordinates(coordinate);
           }}
         >
           <View style={styles.markerContainer}>
@@ -191,11 +266,21 @@ export default function LocationPicker({
       {/* Bottom Controls */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity 
-          style={styles.currentLocationButton} 
-          onPress={getCurrentLocation}
+          style={[
+            styles.currentLocationButton,
+            gettingCurrentLocation && styles.currentLocationButtonDisabled
+          ]} 
+          onPress={() => getCurrentLocation(false)}
+          disabled={gettingCurrentLocation}
         >
-          <Ionicons name="locate" size={20} color="#fff" />
-          <Text style={styles.currentLocationText}>Current Location</Text>
+          {gettingCurrentLocation ? (
+            <ActivityIndicator size={20} color="#fff" />
+          ) : (
+            <Ionicons name="locate" size={20} color="#fff" />
+          )}
+          <Text style={styles.currentLocationText}>
+            {gettingCurrentLocation ? 'Getting Location...' : 'Current Location'}
+          </Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
@@ -242,6 +327,13 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#fff',
+  },
+  mapContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
   markerContainer: {
     alignItems: 'center',
@@ -276,6 +368,10 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
+  },
+  currentLocationButtonDisabled: {
+    backgroundColor: '#555',
+    opacity: 0.7,
   },
   currentLocationText: {
     color: '#fff',

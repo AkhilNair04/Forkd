@@ -1,6 +1,7 @@
 import ItemCard from "@/components/ItemCard";
 import { fetchFavoriteChefs } from "@/constants/fetchFavoriteChefs";
 import { fetchFavoriteDishes } from "@/constants/fetchFavoriteDishes";
+import { useUserId } from "@/constants/getUserId";
 import {
   toggleFavoriteChef,
   toggleFavoriteDish,
@@ -8,7 +9,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   FlatList,
   StatusBar,
@@ -22,17 +23,19 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function FavoritesScreen() {
   const [selectedTab, setSelectedTab] = useState<"Dish" | "Chef">("Dish");
 
-  const userId = "1"; // 🔐 Replace with dynamic logic when auth is set
+  const userId = useUserId();
 
   const { data: favoriteChefs = [], refetch: refetchFavoriteChefs } = useQuery({
     queryKey: ["favoriteChefs", userId],
-    queryFn: () => fetchFavoriteChefs(userId),
+    queryFn: async () => fetchFavoriteChefs(userId!),
+    enabled: !!userId,
   });
 
   const { data: favoriteDishes = [], refetch: refetchFavoriteDishes } =
     useQuery({
       queryKey: ["favoriteDishes", userId],
-      queryFn: () => fetchFavoriteDishes(userId),
+      queryFn: async () => fetchFavoriteDishes(userId!),
+      enabled: !!userId,
     });
 
   // Transform data into uniform structure for ItemCard
@@ -119,10 +122,10 @@ export default function FavoritesScreen() {
               }}
               onToggleDone={async () => {
                 if (selectedTab === "Dish") {
-                  await toggleFavoriteDish(userId, item.id, isFav);
+                  await toggleFavoriteDish(userId!, item.id, isFav);
                   await refetchFavoriteDishes();
                 } else {
-                  await toggleFavoriteChef(userId, item.id, isFav);
+                  await toggleFavoriteChef(userId!, item.id, isFav);
                   await refetchFavoriteChefs();
                 }
               }}
@@ -138,11 +141,11 @@ export default function FavoritesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: "#000",
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   headerContainer: {
     flexDirection: "row",
