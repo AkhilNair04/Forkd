@@ -45,7 +45,9 @@ export default function ItemCard({
 
       <Text style={styles.name}>{item.name}</Text>
       <Text style={styles.cuisine}>
-        #{item.specialties?.[0] || item.cuisine || "N/A"}
+        {Array.isArray(item.specialties)
+          ? item.specialties.map((tag: string) => `#${tag}`).join(" ")
+          : `#${item.cuisine || "N/A"}`}
       </Text>
 
       <View style={styles.ratingRow}>
