@@ -31,9 +31,9 @@ export default function Checkout() {
       Alert.alert("Missing Phone", "Please enter your phone number");
       return false;
     }
-    if (phone.length < 10) {
+    if (phone.length < 6) {
       console.log("❌ Phone is too short:", phone.length);
-      Alert.alert("Invalid Phone", "Please enter a valid phone number");
+      Alert.alert("Invalid Phone", "Please enter a valid phone number (at least 6 digits)");
       return false;
     }
     console.log("✅ Form validation successful");

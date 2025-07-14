@@ -28,7 +28,7 @@
     "**/*.ts",
     "**/*.tsx",
     "app/checkout/index.tsx",
-    "app/payment.jsx"
+    "app/payment.tsx"
   ],
   "exclude": [
     "node_modules"
