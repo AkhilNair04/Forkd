@@ -80,47 +80,54 @@ export default function ChefKYC() {
   };
 
   const pickImageAndUpload = async (
-    field: keyof typeof form,
-    bucket: "chef" | "fssai" | "pcc"
-  ) => {
-    if (!chefFolder) {
-      Alert.alert("Please wait", "Initializing your Chef ID…");
-      return;
-    }
-    try {
-      const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.8,
+  field: keyof typeof form,
+  bucket: "chef" | "fssai" | "pcc"
+): Promise<string | null> => {
+  if (!chefFolder) {
+    Alert.alert("Please wait", "Initializing your Chef ID…");
+    return null;
+  }
+  try {
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+    });
+    if (res.canceled) return null;
+    const asset = res.assets[0];
+    const uri = asset.uri;
+    const ext = uri.split(".").pop() ?? "jpg";
+    const filename = `${chefFolder}/${uuidv4()}.${ext}`;
+    setLoadingField(field);
+
+    const b64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    const buffer = decode(b64);
+
+    const { error } = await supabase.storage
+      .from(bucket)
+      .upload(filename, buffer, {
+        contentType: asset.type ?? `image/${ext}`,
+        upsert: true,
       });
-      if (res.canceled) return;
-      const asset = res.assets[0];
-      const uri = asset.uri;
-      const ext = uri.split(".").pop() ?? "jpg";
-      const filename = `${chefFolder}/${uuidv4()}.${ext}`;
-      setLoadingField(field);
+    if (error) throw error;
 
-      const b64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      const buffer = decode(b64);
+    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filename);
+    const url = urlData?.publicUrl || null;
 
-      const { error } = await supabase.storage
-        .from(bucket)
-        .upload(filename, buffer, {
-          contentType: asset.type ?? `image/${ext}`,
-          upsert: true,
-        });
-      if (error) throw error;
-
-      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filename);
-      setForm(f => ({ ...f, [field]: urlData.publicUrl }));
-    } catch (err: any) {
-      console.error("Upload error:", err);
-      Alert.alert("Upload failed", err.message ?? JSON.stringify(err));
-    } finally {
-      setLoadingField(null);
+    if (url) {
+      setForm(f => ({ ...f, [field]: url }));
     }
-  };
+    return url;
+  } catch (err: any) {
+    console.error("Upload error:", err);
+    Alert.alert("Upload failed", err.message ?? JSON.stringify(err));
+    return null;
+  } finally {
+    setLoadingField(null);
+  }
+};
+
 
   const handleSubmit = async () => {
     if (!acceptedTerms) {
@@ -156,16 +163,27 @@ export default function ChefKYC() {
       return Alert.alert("Update failed", authError.message);
     }
 
-    // 2) upsert Chef table
+    // Get the current logged-in user (auth UID)
+    const { data: sessionData, error: sessionError } = await supabase.auth.getUser();
+    if (sessionError || !sessionData?.user?.id) {
+      setSubmitting(false);
+      console.error("Failed to get user session:", sessionError);
+      return Alert.alert("Error", "Could not verify your session. Please try logging in again.");
+    }
+
     const payload = {
       id: chefFolder,
       name: form.fullName,
-      dob: form.dob.toISOString().split("T")[0], // not-null
-      is_restricted: isRestricted,               // set is_restricted based on missing documents
+      dob: form.dob.toISOString().split("T")[0],
+      is_restricted: isRestricted,
       fssai_number: form.fssaiNum,
       fssai_license_img: form.fssaiDoc,
       pcc_certificate: form.pccDoc,
+      uuid: sessionData.user.id,
+      avatar_url: form.profilePic, // ✅ Add this
     };
+
+
 
     const { error } = await supabase.from("Chef").upsert(payload);
     setSubmitting(false);

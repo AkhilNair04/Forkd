@@ -127,8 +127,6 @@ export default function ProfileScreen() {
         return;
       }
 
-      console.log("Fetched User from Supabase Auth:", user);
-
       // Fetch the user profile from the database using the user_id
       const { data: profileData, error: profileError } = await supabase
         .from("user_profiles")

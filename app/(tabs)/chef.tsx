@@ -9,7 +9,6 @@ import { fetchFavoriteChefs } from "@/constants/fetchFavoriteChefs";
 import { useUserId } from "@/constants/getUserId";
 import { toggleFavoriteChef } from "@/constants/updateFavorites";
 import { useLocation } from "@/context/LocationContext";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
 import { useEffect, useState } from "react";

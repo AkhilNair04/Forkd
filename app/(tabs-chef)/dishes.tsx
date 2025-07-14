@@ -1,5 +1,8 @@
 import { RestrictedTabWrapper } from "@/components/RestrictedTabWrapper";
+import { fetchDishesByChef } from "@/constants/fetchDishesByChef";
+import { useUserId } from "@/constants/getUserId";
 import { AntDesign, Entypo, Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -13,51 +16,34 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const foodItems = [
-  {
-    id: "1",
-    name: "Banana Pancakes",
-    category: "Breakfast",
-    rating: 4.9,
-    reviews: 10,
-    price: "Rs. 350",
-    image:
-      "https://images.unsplash.com/photo-1588016905490-30168011fba6?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: "2",
-    name: "Seafood Pasta",
-    category: "Lunch",
-    rating: 4.9,
-    reviews: 10,
-    price: "Rs. 400",
-    image:
-      "https://images.unsplash.com/photo-1627308595229-7830a5c91f9f?auto=format&fit=crop&w=600&q=80",
-  },
-  {
-    id: "3",
-    name: "Thai Fried Rice",
-    category: "Dinner",
-    rating: 4.9,
-    reviews: 10,
-    price: "Rs. 500",
-    image:
-      "https://images.unsplash.com/photo-1613145996753-c5c4eb0e15a7?auto=format&fit=crop&w=600&q=80",
-  },
-];
+const tabs = ["All", "Breakfast", "Lunch", "Dinner"];
 
 export default function DishesScreen() {
-  const tabs = ["All", "Breakfast", "Lunch", "Dinner"];
   const [selectedTab, setSelectedTab] = useState("All");
-  const [showMenuId, setShowMenuId] = useState(null);
+  const [showMenuId, setShowMenuId] = useState<string | null>(null);
+
+  const chefId = useUserId();
+  console.log("userId at chef-tabs :",chefId);
+
+  const { data: dishes = [] } = useQuery({
+    queryKey: ["chefDishes", chefId],
+    queryFn: async () => fetchDishesByChef(chefId!),
+    enabled: !!chefId,
+  });
+
+  console.log(dishes);
 
   const filteredItems =
     selectedTab === "All"
-      ? foodItems
-      : foodItems.filter((item) => item.category === selectedTab);
-
-  const toggleMenu = (id: any) => {
-    setShowMenuId(showMenuId === id ? null : id);
+      ? dishes
+      : dishes.filter((item) => {
+          const itemTags = item.tags
+            ?.split(",")
+            .map((tag: string) => tag.trim().toLowerCase());
+          return itemTags?.includes(selectedTab.toLowerCase());
+        });
+  const toggleMenu = (id: string) => {
+    setShowMenuId((prev) => (prev === id ? null : id));
   };
 
   return (
@@ -65,8 +51,7 @@ export default function DishesScreen() {
       <SafeAreaView style={{ flex: 1, backgroundColor: "#111" }}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
         <View style={styles.container}>
-          {/* Title */}
-          <Text style={styles.title}>My Food List</Text>
+          <Text style={styles.title}>Menu</Text>
 
           {/* Tabs */}
           <View style={styles.tabContainer}>
@@ -89,12 +74,12 @@ export default function DishesScreen() {
             ))}
           </View>
 
-          {/* Item Count */}
+          {/* Count */}
           <Text style={styles.itemCount}>
             Total {filteredItems.length.toString().padStart(2, "0")} item(s)
           </Text>
 
-          {/* Food List */}
+          {/* Dish List */}
           <FlatList
             data={filteredItems}
             keyExtractor={(item) => item.id}
@@ -102,10 +87,13 @@ export default function DishesScreen() {
             contentContainerStyle={{ paddingBottom: 120 }}
             renderItem={({ item }) => (
               <View style={styles.foodItem}>
-                <Image source={{ uri: item.image }} style={styles.foodImage} />
+                <Image
+                  source={{ uri: item.imageUrl }}
+                  style={styles.foodImage}
+                />
                 <View style={styles.foodContent}>
                   <View style={styles.foodHeader}>
-                    <Text style={styles.foodName}>{item.name}</Text>
+                    <Text style={styles.foodName}>{item.title}</Text>
                     <TouchableOpacity onPress={() => toggleMenu(item.id)}>
                       <Entypo
                         name="dots-three-horizontal"
@@ -117,18 +105,25 @@ export default function DishesScreen() {
 
                   <View style={styles.item_price}>
                     <View style={styles.categoryTag}>
-                      <Text style={styles.categoryText}>{item.category}</Text>
+                      <Text style={styles.categoryText}>
+                        {item.tags
+                          ?.split(",")
+                          .map((tag: string) => tag.trim())
+                          .find((tag: string) =>
+                            ["Breakfast", "Lunch", "Dinner"].includes(tag)
+                          ) ?? ""}
+                      </Text>
                     </View>
-                    <Text style={styles.price}>{item.price}</Text>
+                    <Text style={styles.price}>Rs. {item.price}</Text>
                   </View>
 
                   <View style={styles.bottomRow}>
                     <View style={styles.ratingRow}>
                       <AntDesign name="star" size={16} color="#C67C4E" />
                       <Text style={styles.ratingText}>
-                        {item.rating}{" "}
+                        {item.rating_avg||"N/A"}
                         <Text style={styles.reviewText}>
-                          ({item.reviews} Review)
+                          ({item.reviews ?? 0} Review)
                         </Text>
                       </Text>
                     </View>
@@ -157,7 +152,7 @@ export default function DishesScreen() {
             )}
           />
 
-          {/* Floating Add Button (unchanged as per your layout) */}
+          {/* Add Dish FAB */}
           <TouchableOpacity
             style={styles.fab}
             onPress={() => router.push("/add-dish")}
@@ -171,6 +166,7 @@ export default function DishesScreen() {
 }
 
 const styles = StyleSheet.create({
+  // unchanged styles...
   container: {
     flex: 1,
     backgroundColor: "#000",
@@ -216,11 +212,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontSize: 14,
   },
-  item_price: {
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
   foodItem: {
     flexDirection: "row",
     padding: 12,
@@ -265,6 +256,16 @@ const styles = StyleSheet.create({
     color: "#000",
     fontSize: 15,
   },
+  item_price: {
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  price: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 18,
+  },
   bottomRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -283,11 +284,6 @@ const styles = StyleSheet.create({
   reviewText: {
     color: "#999",
     fontSize: 13,
-  },
-  price: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 18,
   },
   pickupText: {
     color: "#999",
@@ -319,10 +315,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 0,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,

@@ -84,6 +84,14 @@ export default function RootLayout() {
                   name="customer-settings"
                   options={{ headerShown: false }}
                 />
+                <Stack.Screen
+                  name="checkout"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                  name="payment"
+                  options={{ headerShown: false }}
+                />
                 <Stack.Screen name="+not-found" />
               </Stack>
               <StatusBar style="auto" />

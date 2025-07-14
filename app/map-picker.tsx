@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import LocationPicker from '@/components/LocationPicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocation } from '@/context/LocationContext';
