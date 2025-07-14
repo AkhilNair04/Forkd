@@ -20,34 +20,64 @@ export default function Checkout() {
   const total = subtotal + deliveryFee + platformFee + gst;
 
   const validateForm = () => {
+    console.log("🔍 Validating form...");
     if (!address.trim()) {
+      console.log("❌ Address is empty");
       Alert.alert("Missing Address", "Please enter your delivery address");
       return false;
     }
     if (!phone.trim()) {
+      console.log("❌ Phone is empty");
       Alert.alert("Missing Phone", "Please enter your phone number");
       return false;
     }
     if (phone.length < 10) {
+      console.log("❌ Phone is too short:", phone.length);
       Alert.alert("Invalid Phone", "Please enter a valid phone number");
       return false;
     }
+    console.log("✅ Form validation successful");
     return true;
   };
 
-  const handleCheckout = () => {
-    if (!validateForm()) return;
+  const handleCheckout = async () => {
+    console.log("🔥 Checkout button clicked");
+    console.log("🔥 Form data:", { address, phone, instructions, paymentMethod });
+    
+    if (!validateForm()) {
+      console.log("❌ Form validation failed");
+      return;
+    }
+    
+    console.log("✅ Form validation passed");
     
     const amountInPaise = (total * 100).toString();
-    router.push({ 
-      pathname: "/payment", 
-      params: { 
-        total: amountInPaise,
-        address,
-        phone,
-        instructions 
-      } 
+    
+    console.log("🚀 Navigating to payment with:", {
+      total: amountInPaise,
+      address,
+      phone,
+      instructions,
+      paymentMethod
     });
+    
+    try {
+      // First try the standard approach
+      router.push({ 
+        pathname: "/payment", 
+        params: { 
+          total: amountInPaise,
+          address: address.replace(/\n/g, ' '), // Remove newlines
+          phone,
+          instructions: instructions.replace(/\n/g, ' '), // Remove newlines
+          paymentMethod
+        } 
+      });
+      console.log("✅ Navigation successful");
+    } catch (error) {
+      console.error("❌ Navigation error:", error);
+      Alert.alert("Navigation Error", "Unable to proceed to payment. Please try again.");
+    }
   };
 
   return (
@@ -125,7 +155,10 @@ export default function Checkout() {
           
           <TouchableOpacity 
             style={[styles.paymentOption, paymentMethod === "razorpay" && styles.selectedPayment]}
-            onPress={() => setPaymentMethod("razorpay")}
+            onPress={() => {
+              console.log("🔘 Razorpay payment selected");
+              setPaymentMethod("razorpay");
+            }}
           >
             <View style={styles.paymentInfo}>
               <Ionicons name="card-outline" size={24} color="#FF9100" />
@@ -139,7 +172,10 @@ export default function Checkout() {
 
           <TouchableOpacity 
             style={[styles.paymentOption, paymentMethod === "cod" && styles.selectedPayment]}
-            onPress={() => setPaymentMethod("cod")}
+            onPress={() => {
+              console.log("🔘 COD payment selected");
+              setPaymentMethod("cod");
+            }}
           >
             <View style={styles.paymentInfo}>
               <Ionicons name="cash-outline" size={24} color="#FF9100" />

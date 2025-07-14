@@ -7,12 +7,14 @@ import RazorpayCheckout from 'react-native-razorpay';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function PaymentScreen() {
-  const { total, address, phone, instructions } = useLocalSearchParams();
+  const { total, address, phone, instructions, paymentMethod: selectedPaymentMethod } = useLocalSearchParams();
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderDetails, setOrderDetails] = useState(null);
 
   const amount = parseInt(total ?? "0") / 100;
+
+  console.log("Payment screen loaded with:", { total, address, phone, instructions, paymentMethod: selectedPaymentMethod });
 
   useEffect(() => {
     // Prepare order details for storage
@@ -29,33 +31,21 @@ export default function PaymentScreen() {
   }, [total, address, phone, instructions]);
 
   const handleRazorpayPayment = () => {
-    // Check if Razorpay keys are configured
-    const razorpayKey = 'rzp_test_1DP5mmOlF5G5ag'; // Replace this with your actual key
+    // Get Razorpay key from environment variables
+    const razorpayKey = process.env.RAZORPAY_KEY_ID;
     
-    if (!razorpayKey || razorpayKey === 'rzp_test_1DP5mmOlF5G5ag') {
+    console.log("Razorpay Key ID from env:", razorpayKey ? "✅ Found" : "❌ Not found");
+    
+    if (!razorpayKey || razorpayKey === 'rzp_test_your_key_id_here' || razorpayKey.includes('your_key_id_here')) {
       Alert.alert(
-        "Razorpay Not Configured",
-        "Please configure your Razorpay API keys first. Check the setup guide in the console.",
+        "⚠️ Razorpay Not Configured",
+        "Please add your Razorpay API keys to the .env file first.\n\n1. Get keys from dashboard.razorpay.com\n2. Add RAZORPAY_KEY_ID to .env\n3. Restart the app",
         [
           { text: "Use Cash on Delivery", onPress: handleCashOnDelivery },
           { text: "Cancel", style: "cancel" }
         ]
       );
-      console.log(`
-🔧 RAZORPAY SETUP REQUIRED:
-
-1. Go to https://razorpay.com/
-2. Create an account (or login)
-3. Go to Dashboard → Settings → API Keys
-4. Generate/Copy your Key ID
-5. Replace 'rzp_test_1DP5mmOlF5G5ag' with your actual key in app/payment.jsx
-6. For testing, use:
-   - Card: 4111 1111 1111 1111
-   - Expiry: Any future date
-   - CVV: Any 3 digits
-
-Your key should look like: rzp_test_xxxxxxxxxxxxxxxx
-      `);
+      console.log("🔧 RAZORPAY SETUP REQUIRED: Please configure your API keys in .env file");
       return;
     }
 
