@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
-import { Ionicons, Feather } from '@expo/vector-icons';
+// app/checkout/order_placed.tsx
+import React, { useState, useEffect } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
 
-export default function OrderTrackingScreen() {
+export default function OrderPlacedScreen() {
   const [loading, setLoading] = useState(true);
   const [orderDetails, setOrderDetails] = useState<any>(null);
-  const [currentLocation, setCurrentLocation] = useState<any>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -18,11 +17,6 @@ export default function OrderTrackingScreen() {
         if (orderData) {
           setOrderDetails(JSON.parse(orderData));
         }
-        // Assuming location data is available from context
-        setCurrentLocation({
-          latitude: 37.78825,
-          longitude: -122.4324, // Just an example location
-        });
       } catch (error) {
         console.error('Error fetching order details:', error);
       } finally {
@@ -33,94 +27,198 @@ export default function OrderTrackingScreen() {
     fetchOrderDetails();
   }, []);
 
-  const renderOrderDetails = () => {
-    if (loading) {
-      return <ActivityIndicator size="large" color="#FF9100" />;
-    }
-
-    if (!orderDetails) {
-      return <Text>No order details available.</Text>;
-    }
-
+  if (loading) {
     return (
-      <>
-        <View style={styles.orderInfo}>
-          <Text style={styles.orderTitle}>Order Detail 1</Text>
-          <Text style={styles.orderTime}>
-            Ordered At {orderDetails.orderTime}
-          </Text>
-          <Text style={styles.foodImageWrapper}>
-            <Image source={{ uri: orderDetails.foodImage }} style={styles.foodImage} />
-          </Text>
-          <Text style={styles.chefName}>Chef Anna P</Text>
-          <Text style={styles.orderTime}>Order received at 10:00pm</Text>
-        </View>
-
-        {/* Map View */}
-        <MapView
-          style={styles.map}
-          region={{
-            latitude: currentLocation?.latitude || 37.78825,
-            longitude: currentLocation?.longitude || -122.4324,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
-          }}
-        >
-          <Marker coordinate={currentLocation} />
-        </MapView>
-
-        {/* Order Tracking Steps */}
-        <ScrollView style={styles.orderStepsWrapper}>
-          <View style={styles.orderStep}>
-            <Ionicons name="checkmark-circle" size={22} color="#FF9100" />
-            <Text style={styles.orderStepText}>Your order has been received</Text>
-          </View>
-          <View style={styles.orderStep}>
-            <Ionicons name="reload" size={22} color="#FF9100" />
-            <Text style={styles.orderStepText}>The restaurant is preparing your food</Text>
-          </View>
-          <View style={styles.orderStep}>
-            <Ionicons name="car" size={22} color="#FF9100" />
-            <Text style={styles.orderStepText}>Your order has been picked up for delivery</Text>
-          </View>
-          <View style={styles.orderStep}>
-            <Ionicons name="home" size={22} color="#FF9100" />
-            <Text style={styles.orderStepText}>Order arriving soon!</Text>
-          </View>
-        </ScrollView>
-
-        {/* Contact Courier */}
-        <View style={styles.contactCourier}>
-          <Text style={styles.courierName}>Robert F.</Text>
-          <Text style={styles.courierRole}>Courier</Text>
-          <View style={styles.contactButtons}>
-            <TouchableOpacity style={styles.contactButton}>
-              <Ionicons name="call" size={28} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.contactButton}>
-              <Feather name="message-circle" size={28} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF9100" />
+        <Text style={styles.loadingText}>Loading order details...</Text>
+      </View>
     );
-  };
+  }
+
+  if (!orderDetails) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={80} color="#ff4444" />
+          <Text style={styles.errorText}>No order details found</Text>
+          <TouchableOpacity 
+            style={styles.homeButton}
+            onPress={() => router.push("/")}
+          >
+            <Text style={styles.homeButtonText}>Go Home</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {renderOrderDetails()}
-      <View style={styles.bottomNavigation}>
-        <TouchableOpacity
-          style={styles.homeButton}
-          onPress={() => router.push('/home')}
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Success Header */}
+        <View style={styles.successHeader}>
+          <View style={styles.successIcon}>
+            <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
+          </View>
+          <Text style={styles.successTitle}>Order Placed Successfully!</Text>
+          <Text style={styles.successSubtitle}>
+            Your delicious food will be delivered shortly
+          </Text>
+          <Text style={styles.orderId}>Order ID: {orderDetails.orderId}</Text>
+        </View>
+
+        {/* Order Status */}
+        <View style={styles.statusSection}>
+          <Text style={styles.sectionTitle}>Order Status</Text>
+          <View style={styles.statusContainer}>
+            <View style={styles.statusStep}>
+              <View style={styles.statusIconContainer}>
+                <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+              </View>
+              <View style={styles.statusContent}>
+                <Text style={styles.statusTitle}>Order Confirmed</Text>
+                <Text style={styles.statusTime}>Just now</Text>
+              </View>
+            </View>
+
+            <View style={styles.statusStep}>
+              <View style={[styles.statusIconContainer, { backgroundColor: "#333" }]}>
+                <Ionicons name="restaurant" size={24} color="#FF9100" />
+              </View>
+              <View style={styles.statusContent}>
+                <Text style={styles.statusTitle}>Preparing Your Food</Text>
+                <Text style={styles.statusTime}>15-20 mins</Text>
+              </View>
+            </View>
+
+            <View style={styles.statusStep}>
+              <View style={[styles.statusIconContainer, { backgroundColor: "#333" }]}>
+                <Ionicons name="bicycle" size={24} color="#666" />
+              </View>
+              <View style={styles.statusContent}>
+                <Text style={[styles.statusTitle, { color: "#666" }]}>Out for Delivery</Text>
+                <Text style={[styles.statusTime, { color: "#666" }]}>20-25 mins</Text>
+              </View>
+            </View>
+
+            <View style={styles.statusStep}>
+              <View style={[styles.statusIconContainer, { backgroundColor: "#333" }]}>
+                <Ionicons name="home" size={24} color="#666" />
+              </View>
+              <View style={styles.statusContent}>
+                <Text style={[styles.statusTitle, { color: "#666" }]}>Delivered</Text>
+                <Text style={[styles.statusTime, { color: "#666" }]}>25-30 mins</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Order Details */}
+        <View style={styles.orderDetailsSection}>
+          <Text style={styles.sectionTitle}>Order Details</Text>
+          <View style={styles.detailsContainer}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Amount Paid</Text>
+              <Text style={styles.detailValue}>₹{orderDetails.amount}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Payment Method</Text>
+              <Text style={styles.detailValue}>
+                {orderDetails.paymentMethod === 'razorpay' ? 'Online Payment' : 'Cash on Delivery'}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Delivery Address</Text>
+              <Text style={[styles.detailValue, { flex: 1, textAlign: 'right' }]}>
+                {orderDetails.address}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Phone</Text>
+              <Text style={styles.detailValue}>{orderDetails.phone}</Text>
+            </View>
+            {orderDetails.instructions && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Instructions</Text>
+                <Text style={[styles.detailValue, { flex: 1, textAlign: 'right' }]}>
+                  {orderDetails.instructions}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Next Steps */}
+        <View style={styles.nextStepsSection}>
+          <Text style={styles.sectionTitle}>What's Next?</Text>
+          <View style={styles.nextStepsContainer}>
+            <View style={styles.nextStep}>
+              <Ionicons name="time-outline" size={24} color="#FF9100" />
+              <Text style={styles.nextStepText}>
+                Your food will be ready in 15-20 minutes
+              </Text>
+            </View>
+            <View style={styles.nextStep}>
+              <Ionicons name="call-outline" size={24} color="#FF9100" />
+              <Text style={styles.nextStepText}>
+                We'll call you once the delivery partner is assigned
+              </Text>
+            </View>
+            <View style={styles.nextStep}>
+              <Ionicons name="star-outline" size={24} color="#FF9100" />
+              <Text style={styles.nextStepText}>
+                Rate your experience after delivery
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity 
+            style={styles.exploreButton}
+            onPress={() => router.push("/(tabs)/dish")}
+          >
+            <Ionicons name="restaurant-outline" size={20} color="#FF9100" />
+            <Text style={styles.exploreButtonText}>Explore More Dishes</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.chefsButton}
+            onPress={() => router.push("/")} // Navigate to chefs section
+          >
+            <Ionicons name="people-outline" size={20} color="#fff" />
+            <Text style={styles.chefsButtonText}>Discover Chefs</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => router.push("/")}
         >
-          <Ionicons name="home" size={28} color="#fff" />
+          <Ionicons name="home-outline" size={24} color="#FF9100" />
+          <Text style={styles.navButtonText}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.profileButton}
-          onPress={() => router.push('/profile')}
+
+        <TouchableOpacity 
+          style={styles.navButton}
+          onPress={() => router.push("/order-history")}
         >
-          <Ionicons name="person" size={28} color="#fff" />
+          <Ionicons name="receipt-outline" size={24} color="#666" />
+          <Text style={[styles.navButtonText, { color: "#666" }]}>Orders</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.navButton}
+          // This will be implemented when order is delivered
+          disabled
+        >
+          <Ionicons name="star-outline" size={24} color="#666" />
+          <Text style={[styles.navButtonText, { color: "#666" }]}>Rate</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -130,103 +228,208 @@ export default function OrderTrackingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111',
+    backgroundColor: "#000",
   },
-  orderInfo: {
-    padding: 16,
-    backgroundColor: '#2c2c2c',
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-  },
-  orderTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  orderTime: {
-    color: '#FF9100',
-    marginTop: 8,
-  },
-  foodImageWrapper: {
-    marginTop: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  foodImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 10,
-  },
-  chefName: {
-    color: '#fff',
-    marginTop: 8,
-  },
-  orderStepsWrapper: {
-    marginTop: 20,
-    paddingHorizontal: 16,
-  },
-  orderStep: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  orderStepText: {
-    color: '#fff',
-    fontSize: 16,
-    marginLeft: 8,
-  },
-  map: {
+  loadingContainer: {
     flex: 1,
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  contactCourier: {
-    padding: 16,
-    backgroundColor: '#2c2c2c',
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
-    alignItems: 'center',
-  },
-  courierName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  courierRole: {
-    fontSize: 14,
-    color: '#C67C4E',
-    marginTop: 4,
-  },
-  contactButtons: {
-    flexDirection: 'row',
+  loadingText: {
+    color: "#fff",
+    fontSize: 16,
     marginTop: 16,
   },
-  contactButton: {
-    backgroundColor: '#FF9100',
-    padding: 12,
-    borderRadius: 50,
-    marginHorizontal: 10,
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
   },
-  bottomNavigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#2c2c2c',
-    height: 65,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
+  errorText: {
+    color: "#fff",
+    fontSize: 18,
+    marginTop: 20,
+    textAlign: "center",
+  },
+  content: {
+    flex: 1,
     paddingHorizontal: 20,
+    paddingTop: 60,
+  },
+  successHeader: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  successIcon: {
+    marginBottom: 20,
+  },
+  successTitle: {
+    color: "#fff",
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  successSubtitle: {
+    color: "#999",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  orderId: {
+    color: "#FF9100",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  statusSection: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 16,
+  },
+  statusContainer: {
+    backgroundColor: "#1a1a1a",
+    borderRadius: 12,
+    padding: 16,
+  },
+  statusStep: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  statusIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#4CAF50",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  statusContent: {
+    flex: 1,
+  },
+  statusTitle: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  statusTime: {
+    color: "#999",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  orderDetailsSection: {
+    marginBottom: 32,
+  },
+  detailsContainer: {
+    backgroundColor: "#1a1a1a",
+    borderRadius: 12,
+    padding: 16,
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#333",
+  },
+  detailLabel: {
+    color: "#999",
+    fontSize: 14,
+  },
+  detailValue: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  nextStepsSection: {
+    marginBottom: 32,
+  },
+  nextStepsContainer: {
+    backgroundColor: "#1a1a1a",
+    borderRadius: 12,
+    padding: 16,
+  },
+  nextStep: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  nextStepText: {
+    color: "#fff",
+    fontSize: 14,
+    marginLeft: 12,
+    flex: 1,
+  },
+  actionButtons: {
+    marginBottom: 20,
+  },
+  exploreButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1a1a1a",
+    borderWidth: 1,
+    borderColor: "#FF9100",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  exploreButtonText: {
+    color: "#FF9100",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+  chefsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FF9100",
+    borderRadius: 12,
+    padding: 16,
+  },
+  chefsButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+  bottomNav: {
+    flexDirection: "row",
+    backgroundColor: "#1a1a1a",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#333",
+  },
+  navButton: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  navButtonText: {
+    color: "#FF9100",
+    fontSize: 12,
+    marginTop: 4,
   },
   homeButton: {
-    backgroundColor: '#C67C4E',
-    padding: 10,
-    borderRadius: 50,
+    backgroundColor: "#FF9100",
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginTop: 20,
   },
-  profileButton: {
-    backgroundColor: '#C67C4E',
-    padding: 10,
-    borderRadius: 50,
+  homeButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
