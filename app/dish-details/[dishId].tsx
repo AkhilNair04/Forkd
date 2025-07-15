@@ -26,7 +26,9 @@ export default function DishDetailScreen() {
     queryFn: fetchDishes,
   });
 
-  const { data: chefs = [], isLoading: isChefsLoading } = useQuery<ChefForDish[]>({
+  const { data: chefs = [], isLoading: isChefsLoading } = useQuery<
+    ChefForDish[]
+  >({
     queryKey: ["chefs-for-dish", dishIdString],
     queryFn: () => fetchChefsForDish(dishIdString),
   });
@@ -144,9 +146,15 @@ export default function DishDetailScreen() {
                 return (
                   <TouchableOpacity
                     onPress={() => setSelectedChef(item)}
-                    style={[styles.chefCard, isSelected && styles.selectedChefCard]}
+                    style={[
+                      styles.chefCard,
+                      isSelected && styles.selectedChefCard,
+                    ]}
                   >
-                    <Image source={{ uri: item.avatar }} style={styles.avatar} />
+                    <Image
+                      source={{ uri: item.avatar }}
+                      style={styles.avatar}
+                    />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.chefName}>{item.name}</Text>
                       <View style={styles.ratingPriceRow}>
@@ -157,7 +165,9 @@ export default function DishDetailScreen() {
                         </View>
                       </View>
                     </View>
-                    <Text style={styles.priceText}>₹{item.price * quantity}</Text>
+                    <Text style={styles.priceText}>
+                      ₹{item.price * quantity}
+                    </Text>
                   </TouchableOpacity>
                 );
               }}
@@ -170,17 +180,19 @@ export default function DishDetailScreen() {
               onPress={() => {
                 if (!selectedChef) return;
 
+                router.push("/checkout/cart");
+
                 addToCart({
                   id: `${dish.id}-${selectedChef.id}`,
                   name: dish.title,
                   price: selectedChef.price,
                   image: dish.imageUrl,
-                  meal_type: dish.tags?.[0] || "N/A",
+                  type: dish.tags?.[0] || "N/A",
                   quantity,
                   chef: {
                     id: selectedChef.id,
                     name: selectedChef.name,
-                    avatar: selectedChef.avatar,
+            
                   },
                 });
               }}
