@@ -192,7 +192,7 @@ export default function DishDetailScreen() {
                   chef: {
                     id: selectedChef.id,
                     name: selectedChef.name,
-            
+                    
                   },
                 });
               }}

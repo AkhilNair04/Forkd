@@ -17,7 +17,7 @@ export default function ItemCard({
   onToggleDone?: () => void;
 }) {
   const [favorite, setFavorite] = useState(isFavorite);
-  const { addToCart } = useCart();
+  
 
   useEffect(() => {
     setFavorite(isFavorite);
