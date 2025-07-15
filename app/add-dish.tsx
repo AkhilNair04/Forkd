@@ -85,6 +85,7 @@ export default function AddDishScreen() {
         contains,
         tags: selectedCategory,
         price: parseFloat(price),
+        imageUri: image || "", // <- pass URI to backend
       };
 
       // ✅ Step 3: Call addDish with chefId
