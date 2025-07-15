@@ -1,8 +1,8 @@
-import { supabase } from '@/constants/supabase';
-import { Feather, Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { supabase } from "@/constants/supabase";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,10 +10,10 @@ import {
   Modal,
   ScrollView,
   StatusBar,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -43,14 +43,15 @@ export default function ProfileScreen() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile>({
-    name: '',
-    email: '',
-    phone: '',
-    userType: 'customer',
-    avatar: 'https://ui-avatars.com/api/?name=User&background=666&color=fff&size=256',
-    location: '',
-    joinDate: '',
-    bio: ''
+    name: "",
+    email: "",
+    phone: "",
+    userType: "customer",
+    avatar:
+      "https://ui-avatars.com/api/?name=User&background=666&color=fff&size=256",
+    location: "",
+    joinDate: "",
+    bio: "",
   });
 
   const [userStats, setUserStats] = useState<UserStats>({
@@ -69,10 +70,10 @@ export default function ProfileScreen() {
   // Fetch user stats from AsyncStorage or calculate defaults if no data exists
   const loadUserStats = async () => {
     try {
-      const orderHistory = await AsyncStorage.getItem('orderHistory');
-      const favoriteChefs = await AsyncStorage.getItem('favoriteChefs');
-      const savedDishes = await AsyncStorage.getItem('favoriteDishes');
-      
+      const orderHistory = await AsyncStorage.getItem("orderHistory");
+      const favoriteChefs = await AsyncStorage.getItem("favoriteChefs");
+      const savedDishes = await AsyncStorage.getItem("favoriteDishes");
+
       let stats = {
         totalOrders: 0,
         favoriteChefs: 0,
@@ -83,7 +84,10 @@ export default function ProfileScreen() {
       if (orderHistory) {
         const orders = JSON.parse(orderHistory);
         stats.totalOrders = orders.length;
-        stats.totalSpent = orders.reduce((total: number, order: any) => total + order.totalAmount, 0);
+        stats.totalSpent = orders.reduce(
+          (total: number, order: any) => total + order.totalAmount,
+          0
+        );
       }
 
       if (favoriteChefs) {
@@ -101,13 +105,13 @@ export default function ProfileScreen() {
           totalOrders: 12,
           favoriteChefs: 5,
           savedDishes: 18,
-          totalSpent: 245.80,
+          totalSpent: 245.8,
         };
       }
 
       setUserStats(stats);
     } catch (error) {
-      console.error('Error loading user stats:', error);
+      console.error("Error loading user stats:", error);
     }
   };
 
@@ -136,24 +140,34 @@ export default function ProfileScreen() {
 
       if (profileError) {
         console.error("Error fetching user profile:", profileError);
-        return;
       }
 
-      console.log("Fetched Profile Data:", profileData);
+      console.log("User email:", user.email);
+      console.log("User metadata:", user.user_metadata);
+      console.log("Profile Data:", profileData);
+
+      // Try to get name from multiple sources in order of preference
+      const userName =
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        profileData?.full_name ||
+        user.email?.split("@")[0] || // Use email prefix as fallback
+        "No Name";
 
       setUserProfile({
-        name: profileData?.full_name || "No Name",
-        email: user.email || "", 
+        name: userName,
+        email: user.email || "",
         phone: profileData?.phone || "",
         userType: profileData?.user_type || "customer",
         avatar: profileData?.avatar_url || "",
         location: profileData?.location || "Unknown",
         joinDate: profileData?.created_at
           ? new Date(profileData.created_at).toLocaleDateString()
+          : user.created_at
+          ? new Date(user.created_at).toLocaleDateString()
           : "N/A",
         bio: profileData?.bio || "",
       });
-
     } catch (error) {
       console.error("Error loading profile:", error);
     } finally {
@@ -175,12 +189,12 @@ export default function ProfileScreen() {
   // Save profile changes to Supabase
   const handleSaveProfile = async () => {
     if (!userProfile.name.trim()) {
-      Alert.alert('Missing Information', 'Please enter your name');
+      Alert.alert("Missing Information", "Please enter your name");
       return;
     }
 
     if (!userProfile.location) {
-      Alert.alert('Missing Information', 'Please select your location');
+      Alert.alert("Missing Information", "Please select your location");
       return;
     }
 
@@ -198,10 +212,10 @@ export default function ProfileScreen() {
 
       setShowProfileModal(false);
       loadUserProfile(); // Reload profile data
-      Alert.alert('Success', 'Your profile has been updated!');
+      Alert.alert("Success", "Your profile has been updated!");
     } catch (error) {
-      console.error('Profile save error:', error);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      console.error("Profile save error:", error);
+      Alert.alert("Error", "Something went wrong. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -213,7 +227,15 @@ export default function ProfileScreen() {
   };
 
   // Stats Card Component
-  const StatCard = ({ icon, value, label }: { icon: string; value: string | number; label: string }) => (
+  const StatCard = ({
+    icon,
+    value,
+    label,
+  }: {
+    icon: string;
+    value: string | number;
+    label: string;
+  }) => (
     <View style={styles.statCard}>
       <Ionicons name={icon as any} size={24} color="#C67C4E" />
       <Text style={styles.statValue}>{value}</Text>
@@ -253,7 +275,10 @@ export default function ProfileScreen() {
     <>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       <SafeAreaView style={styles.container}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Profile</Text>
@@ -264,16 +289,34 @@ export default function ProfileScreen() {
 
           {/* Profile Card */}
           <View style={styles.profileCard}>
-            <Image source={{ uri: userProfile.avatar || "" }} style={styles.avatar} />
+            <Image
+              source={{ uri: userProfile.avatar || "" }}
+              style={styles.avatar}
+            />
             <View style={styles.profileInfo}>
-              <Text style={styles.userName}>{userProfile.name}</Text>
-              <Text style={styles.userType}>
-                {userProfile.userType === "customer" ? "👤 Customer" : "👨‍🍳 Chef"}
+              <Text style={styles.userName}>
+                {userProfile.name || "No Name Set"}
               </Text>
-              <Text style={styles.userLocation}>📍 {userProfile.location}</Text>
-              <Text style={styles.joinDate}>Member since {userProfile.joinDate}</Text>
+              <Text style={styles.userType}>
+                {userProfile.userType === "customer"
+                  ? "👤 Customer"
+                  : "👨‍🍳 Chef"}
+              </Text>
+              <Text style={styles.userLocation}>
+                📍 {userProfile.location || "Location not set"}
+              </Text>
+              <Text style={styles.joinDate}>
+                Member since {userProfile.joinDate || "Unknown"}
+              </Text>
+              {/* Debug info - remove this after fixing */}
+              <Text style={styles.debugText}>
+                Debug: Name="{userProfile.name}", Email="{userProfile.email}"
+              </Text>
             </View>
-            <TouchableOpacity style={styles.editButton} onPress={() => router.push("/customer-settings/customer-profile")}>
+            <TouchableOpacity
+              style={styles.editButton}
+              onPress={() => router.push("/customer-settings/customer-profile")}
+            >
               <Feather name="edit-2" size={18} color="#C67C4E" />
             </TouchableOpacity>
           </View>
@@ -282,10 +325,26 @@ export default function ProfileScreen() {
           <View style={styles.statsSection}>
             <Text style={styles.sectionTitle}>Your Stats</Text>
             <View style={styles.statsGrid}>
-              <StatCard icon="restaurant" value={userStats.totalOrders} label="Orders" />
-              <StatCard icon="heart" value={userStats.favoriteChefs} label="Fav Chefs" />
-              <StatCard icon="bookmark" value={userStats.savedDishes} label="Saved Dishes" />
-              <StatCard icon="wallet" value={`₹${userStats.totalSpent.toLocaleString()}`} label="Total Spent" />
+              <StatCard
+                icon="restaurant"
+                value={userStats.totalOrders}
+                label="Orders"
+              />
+              <StatCard
+                icon="heart"
+                value={userStats.favoriteChefs}
+                label="Fav Chefs"
+              />
+              <StatCard
+                icon="bookmark"
+                value={userStats.savedDishes}
+                label="Saved Dishes"
+              />
+              <StatCard
+                icon="wallet"
+                value={`₹${userStats.totalSpent.toLocaleString()}`}
+                label="Total Spent"
+              />
             </View>
           </View>
 
@@ -293,9 +352,29 @@ export default function ProfileScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Quick Actions</Text>
             <View style={styles.menuContainer}>
-              <MenuOption icon="heart" title="Favorites" subtitle="Your saved chefs and dishes" onPress={() => router.push("/favorites")} />
-              <MenuOption icon="clock" title="Order History" subtitle="View your past orders" onPress={() => Alert.alert("Coming Soon", "Order history feature will be available soon!")} />
-              <MenuOption icon="message-circle" title="Messages" subtitle="Chat with your chefs" onPress={() => router.push("/chat")} />
+              <MenuOption
+                icon="heart"
+                title="Favorites"
+                subtitle="Your saved chefs and dishes"
+                onPress={() => router.push("/favorites")}
+              />
+              <MenuOption
+                icon="clock"
+                title="Order History"
+                subtitle="View your past orders"
+                onPress={() =>
+                  Alert.alert(
+                    "Coming Soon",
+                    "Order history feature will be available soon!"
+                  )
+                }
+              />
+              <MenuOption
+                icon="message-circle"
+                title="Messages"
+                subtitle="Chat with your chefs"
+                onPress={() => router.push("/chat")}
+              />
             </View>
           </View>
 
@@ -303,15 +382,44 @@ export default function ProfileScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Settings & Support</Text>
             <View style={styles.menuContainer}>
-              <MenuOption icon="user" title="Account Settings" subtitle="Edit profile and preferences" onPress={() => router.push("/customer-settings/settings")} />
-              <MenuOption icon="bell" title="Notifications" subtitle="Manage notification preferences" onPress={() => router.push("/notification-demo")} />
-              <MenuOption icon="shield" title="Privacy & Security" subtitle="Manage your privacy settings" onPress={() => Alert.alert("Coming Soon", "Privacy settings will be available soon!")} />
-              <MenuOption icon="help-circle" title="Help & Support" subtitle="Get help and contact support" onPress={() => router.push("/customer-settings/support")} />
+              <MenuOption
+                icon="user"
+                title="Account Settings"
+                subtitle="Edit profile and preferences"
+                onPress={() => router.push("/customer-settings/settings")}
+              />
+              <MenuOption
+                icon="bell"
+                title="Notifications"
+                subtitle="Manage notification preferences"
+                onPress={() => router.push("/notification-demo")}
+              />
+              <MenuOption
+                icon="shield"
+                title="Privacy & Security"
+                subtitle="Manage your privacy settings"
+                onPress={() =>
+                  Alert.alert(
+                    "Coming Soon",
+                    "Privacy settings will be available soon!"
+                  )
+                }
+              />
+              <MenuOption
+                icon="help-circle"
+                title="Help & Support"
+                subtitle="Get help and contact support"
+                onPress={() => router.push("/customer-settings/support")}
+              />
             </View>
           </View>
 
           {/* Logout Button */}
-          <TouchableOpacity style={styles.logoutButton} onPress={() => handleLogoutWithConfirmation()} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={() => handleLogoutWithConfirmation()}
+            activeOpacity={0.7}
+          >
             <Feather name="log-out" size={20} color="#ff4444" />
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
@@ -319,19 +427,35 @@ export default function ProfileScreen() {
       </SafeAreaView>
 
       {/* Custom Logout Confirmation Modal */}
-      <Modal visible={showLogoutModal} transparent animationType="fade" onRequestClose={() => setShowLogoutModal(false)}>
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Feather name="log-out" size={24} color="#ff4444" />
               <Text style={styles.modalTitle}>Logout</Text>
             </View>
-            <Text style={styles.modalMessage}>Are you sure you want to logout?</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to logout?
+            </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalCancelButton} onPress={() => setShowLogoutModal(false)}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowLogoutModal(false)}
+              >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalLogoutButton} onPress={() => { setShowLogoutModal(false); handleLogout(); }}>
+              <TouchableOpacity
+                style={styles.modalLogoutButton}
+                onPress={() => {
+                  setShowLogoutModal(false);
+                  handleLogout();
+                }}
+              >
                 <Text style={styles.modalLogoutText}>Logout</Text>
               </TouchableOpacity>
             </View>
@@ -340,11 +464,18 @@ export default function ProfileScreen() {
       </Modal>
 
       {/* Profile Completion Modal */}
-      <Modal visible={showProfileModal} transparent animationType="slide" onRequestClose={() => setShowProfileModal(false)}>
+      <Modal
+        visible={showProfileModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowProfileModal(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Complete Your Profile</Text>
-            <Text style={styles.modalMessage}>Please fill in the details below:</Text>
+            <Text style={styles.modalMessage}>
+              Please fill in the details below:
+            </Text>
 
             {/* Profile Form */}
             <View style={styles.profileForm}>
@@ -353,21 +484,27 @@ export default function ProfileScreen() {
                 placeholder="Full Name"
                 placeholderTextColor="#666"
                 value={userProfile.name}
-                onChangeText={(text) => setUserProfile({ ...userProfile, name: text })}
+                onChangeText={(text) =>
+                  setUserProfile({ ...userProfile, name: text })
+                }
               />
               <TextInput
                 style={styles.input}
                 placeholder="Location"
                 placeholderTextColor="#666"
                 value={userProfile.location}
-                onChangeText={(text) => setUserProfile({ ...userProfile, location: text })}
+                onChangeText={(text) =>
+                  setUserProfile({ ...userProfile, location: text })
+                }
               />
               <TextInput
                 style={styles.input}
                 placeholder="Bio"
                 placeholderTextColor="#666"
                 value={userProfile.bio}
-                onChangeText={(text) => setUserProfile({ ...userProfile, bio: text })}
+                onChangeText={(text) =>
+                  setUserProfile({ ...userProfile, bio: text })
+                }
                 multiline
                 numberOfLines={3}
               />
@@ -375,14 +512,24 @@ export default function ProfileScreen() {
 
             {/* Loading Indicator */}
             {saving ? (
-              <ActivityIndicator size="small" color="#C67C4E" style={styles.loadingIndicator} />
+              <ActivityIndicator
+                size="small"
+                color="#C67C4E"
+                style={styles.loadingIndicator}
+              />
             ) : (
-              <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveProfile}
+              >
                 <Text style={styles.saveButtonText}>Save Changes</Text>
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity style={styles.modalCloseButton} onPress={() => setShowProfileModal(false)}>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowProfileModal(false)}
+            >
               <Text style={styles.modalCloseText}>Close</Text>
             </TouchableOpacity>
           </View>
@@ -396,13 +543,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#000",
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   scrollContent: {
     paddingBottom: 100,
-    minHeight: '100%',
-    width: '100%',
+    minHeight: "100%",
+    width: "100%",
     flexGrow: 1,
   },
   header: {
@@ -458,9 +605,9 @@ const styles = StyleSheet.create({
   },
   userBio: {
     fontSize: 13,
-    color: '#ccc',
+    color: "#ccc",
     marginTop: 4,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   editButton: {
     backgroundColor: "#2a2a2a",
@@ -760,12 +907,12 @@ const styles = StyleSheet.create({
   },
   // Enhanced profile modal styles
   profileModalContainer: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: "#1a1a1a",
     borderRadius: 20,
     margin: 20,
-    maxHeight: '80%',
+    maxHeight: "80%",
     padding: 0,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   profileModalContent: {
     maxHeight: 400,
@@ -776,21 +923,27 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
+    fontWeight: "600",
+    color: "#fff",
     marginBottom: 8,
   },
   modalInput: {
-    backgroundColor: '#2a2a2a',
+    backgroundColor: "#2a2a2a",
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#fff',
+    color: "#fff",
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: "#333",
   },
   bioInput: {
     minHeight: 80,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
+  },
+  debugText: {
+    fontSize: 10,
+    color: "#666",
+    marginTop: 4,
+    fontStyle: "italic",
   },
 });

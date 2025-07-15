@@ -1,19 +1,19 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Stack, router } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { Stack, router } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
-    Alert,
-    Dimensions,
-    FlatList,
-    Image,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
-import { useCart } from '../../context/CartContext';
-import { getCurrentUserProfile } from '../../lib/supabase';
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useCart } from "../../context/CartContext";
+import { getCurrentUserProfile } from "../../lib/supabase";
 
 interface Reel {
   id: string;
@@ -44,20 +44,23 @@ interface Reel {
 // Mock data for reels
 const mockReels: Reel[] = [
   {
-    id: '1',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    thumbnail: 'https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg',
-    title: 'Perfect Crab Rangoon',
-    description: 'Learn how to make the perfect crispy crab rangoon with this secret technique! 🦀✨',
+    id: "1",
+    videoUrl:
+      "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+    thumbnail:
+      "https://images.pexels.com/photos/1640772/pexels-photo-1640772.jpeg",
+    title: "Perfect Crab Rangoon",
+    description:
+      "Learn how to make the perfect crispy crab rangoon with this secret technique! 🦀✨",
     chef: {
-      id: 'chef1',
-      name: 'Chef Anna P',
-      avatar: 'https://randomuser.me/api/portraits/women/68.jpg',
+      id: "chef1",
+      name: "Chef Anna P",
+      avatar: "https://randomuser.me/api/portraits/women/68.jpg",
       verified: true,
     },
     dish: {
-      id: '1',
-      name: 'Crab Rangoon',
+      id: "1",
+      name: "Crab Rangoon",
       price: 499,
     },
     likes: 12400,
@@ -65,24 +68,27 @@ const mockReels: Reel[] = [
     shares: 89,
     isLiked: false,
     isFollowing: false,
-    tags: ['#crabrangoon', '#cooking', '#crispy', '#appetizer'],
+    tags: ["#crabrangoon", "#cooking", "#crispy", "#appetizer"],
     duration: 45,
   },
   {
-    id: '2',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    thumbnail: 'https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg',
-    title: 'Italian Pasta Magic',
-    description: 'Making fresh pasta from scratch - it\'s easier than you think! 🍝',
+    id: "2",
+    videoUrl:
+      "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+    thumbnail:
+      "https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg",
+    title: "Italian Pasta Magic",
+    description:
+      "Making fresh pasta from scratch - it's easier than you think! 🍝",
     chef: {
-      id: 'chef2',
-      name: 'Chef Marco',
-      avatar: 'https://randomuser.me/api/portraits/men/75.jpg',
+      id: "chef2",
+      name: "Chef Marco",
+      avatar: "https://randomuser.me/api/portraits/men/75.jpg",
       verified: true,
     },
     dish: {
-      id: '2',
-      name: 'Fresh Pasta',
+      id: "2",
+      name: "Fresh Pasta",
       price: 799,
     },
     likes: 8900,
@@ -90,24 +96,26 @@ const mockReels: Reel[] = [
     shares: 234,
     isLiked: true,
     isFollowing: true,
-    tags: ['#pasta', '#italian', '#fresh', '#homemade'],
+    tags: ["#pasta", "#italian", "#fresh", "#homemade"],
     duration: 60,
   },
   {
-    id: '3',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    thumbnail: 'https://images.pexels.com/photos/2097090/pexels-photo-2097090.jpeg',
-    title: 'Sushi Rolling Masterclass',
-    description: 'Watch me roll the perfect sushi in under 30 seconds! 🍣',
+    id: "3",
+    videoUrl:
+      "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+    thumbnail:
+      "https://images.pexels.com/photos/2097090/pexels-photo-2097090.jpeg",
+    title: "Sushi Rolling Masterclass",
+    description: "Watch me roll the perfect sushi in under 30 seconds! 🍣",
     chef: {
-      id: 'chef3',
-      name: 'Chef Yuki',
-      avatar: 'https://randomuser.me/api/portraits/women/32.jpg',
+      id: "chef3",
+      name: "Chef Yuki",
+      avatar: "https://randomuser.me/api/portraits/women/32.jpg",
       verified: true,
     },
     dish: {
-      id: '3',
-      name: 'Dragon Roll',
+      id: "3",
+      name: "Dragon Roll",
       price: 1299,
     },
     likes: 15600,
@@ -115,7 +123,7 @@ const mockReels: Reel[] = [
     shares: 567,
     isLiked: false,
     isFollowing: false,
-    tags: ['#sushi', '#japanese', '#rolling', '#fresh'],
+    tags: ["#sushi", "#japanese", "#rolling", "#fresh"],
     duration: 30,
   },
 ];
@@ -124,14 +132,14 @@ export default function ReelScreen() {
   const [reels, setReels] = useState<Reel[]>(mockReels);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userProfile, setUserProfile] = useState<any>(null);
-  const [screenData, setScreenData] = useState(Dimensions.get('window'));
+  const [screenData, setScreenData] = useState(Dimensions.get("window"));
   const { addToCart } = useCart();
 
   useEffect(() => {
     loadUserProfile();
-    
+
     // Listen for dimension changes
-    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
       setScreenData(window);
     });
 
@@ -149,19 +157,22 @@ export default function ReelScreen() {
     }
   }, []);
 
-  const viewabilityConfig = useCallback(() => ({
-    itemVisiblePercentThreshold: 80,
-    waitForInteraction: false
-  }), []);
+  const viewabilityConfig = useCallback(
+    () => ({
+      itemVisiblePercentThreshold: 80,
+      waitForInteraction: false,
+    }),
+    []
+  );
 
   const handleLike = (reelId: string) => {
-    setReels(prevReels => 
-      prevReels.map(reel => 
-        reel.id === reelId 
-          ? { 
-              ...reel, 
-              isLiked: !reel.isLiked, 
-              likes: reel.isLiked ? reel.likes - 1 : reel.likes + 1 
+    setReels((prevReels) =>
+      prevReels.map((reel) =>
+        reel.id === reelId
+          ? {
+              ...reel,
+              isLiked: !reel.isLiked,
+              likes: reel.isLiked ? reel.likes - 1 : reel.likes + 1,
             }
           : reel
       )
@@ -169,9 +180,9 @@ export default function ReelScreen() {
   };
 
   const handleFollow = (chefId: string) => {
-    setReels(prevReels => 
-      prevReels.map(reel => 
-        reel.chef.id === chefId 
+    setReels((prevReels) =>
+      prevReels.map((reel) =>
+        reel.chef.id === chefId
           ? { ...reel, isFollowing: !reel.isFollowing }
           : reel
       )
@@ -179,11 +190,11 @@ export default function ReelScreen() {
   };
 
   const handleComment = (reelId: string) => {
-    Alert.alert('Comments', 'Comment feature coming soon!');
+    Alert.alert("Comments", "Comment feature coming soon!");
   };
 
   const handleShare = (reelId: string) => {
-    Alert.alert('Share', 'Share feature coming soon!');
+    Alert.alert("Share", "Share feature coming soon!");
   };
 
   const handleAddToCart = (dish: any) => {
@@ -192,11 +203,11 @@ export default function ReelScreen() {
         id: dish.id,
         name: dish.name,
         price: dish.price,
-        image: reels.find(r => r.dish?.id === dish.id)?.thumbnail || '',
+        image: reels.find((r) => r.dish?.id === dish.id)?.thumbnail || "",
         quantity: 1,
-        meal_type: 'dish',
+        meal_type: "dish",
       });
-      Alert.alert('Added to Cart', `${dish.name} has been added to your cart!`);
+      Alert.alert("Added to Cart", `${dish.name} has been added to your cart!`);
     }
   };
 
@@ -209,14 +220,19 @@ export default function ReelScreen() {
   };
 
   const renderReelItem = ({ item, index }: { item: Reel; index: number }) => (
-    <View style={[styles.reelContainer, { width: screenData.width, height: screenData.height }]}>
+    <View
+      style={[
+        styles.reelContainer,
+        { width: screenData.width, height: screenData.height },
+      ]}
+    >
       {/* Background Image */}
-      <Image 
-        source={{ uri: item.thumbnail }} 
-        style={styles.backgroundImage} 
+      <Image
+        source={{ uri: item.thumbnail }}
+        style={styles.backgroundImage}
         resizeMode="cover"
       />
-      
+
       {/* Dark Overlay */}
       <View style={styles.overlay} />
 
@@ -233,11 +249,14 @@ export default function ReelScreen() {
         {/* Left Content */}
         <View style={styles.leftContent}>
           {/* Chef Info */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.chefContainer}
             onPress={() => navigateToChefProfile(item.chef.id)}
           >
-            <Image source={{ uri: item.chef.avatar }} style={styles.chefAvatar} />
+            <Image
+              source={{ uri: item.chef.avatar }}
+              style={styles.chefAvatar}
+            />
             <View style={styles.chefInfo}>
               <View style={styles.chefNameRow}>
                 <Text style={styles.chefName}>{item.chef.name}</Text>
@@ -245,12 +264,20 @@ export default function ReelScreen() {
                   <Ionicons name="checkmark-circle" size={16} color="#D4A373" />
                 )}
               </View>
-              <TouchableOpacity 
-                style={[styles.followBtn, item.isFollowing && styles.followingBtn]}
+              <TouchableOpacity
+                style={[
+                  styles.followBtn,
+                  item.isFollowing && styles.followingBtn,
+                ]}
                 onPress={() => handleFollow(item.chef.id)}
               >
-                <Text style={[styles.followText, item.isFollowing && styles.followingText]}>
-                  {item.isFollowing ? 'Following' : 'Follow'}
+                <Text
+                  style={[
+                    styles.followText,
+                    item.isFollowing && styles.followingText,
+                  ]}
+                >
+                  {item.isFollowing ? "Following" : "Follow"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -265,21 +292,25 @@ export default function ReelScreen() {
           {/* Tags */}
           <View style={styles.tagsRow}>
             {item.tags.slice(0, 3).map((tag, idx) => (
-              <Text key={idx} style={styles.tag}>{tag}</Text>
+              <Text key={idx} style={styles.tag}>
+                {tag}
+              </Text>
             ))}
           </View>
 
           {/* Dish Container */}
           {item.dish && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.dishContainer}
               onPress={() => navigateToDishDetails(item.dish!.id)}
             >
               <View style={styles.dishInfo}>
                 <Text style={styles.dishName}>{item.dish.name}</Text>
-                <Text style={styles.dishPrice}>${(item.dish.price / 100).toFixed(2)}</Text>
+                <Text style={styles.dishPrice}>
+                  ${(item.dish.price / 100).toFixed(2)}
+                </Text>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.orderBtn}
                 onPress={() => handleAddToCart(item.dish)}
               >
@@ -291,21 +322,23 @@ export default function ReelScreen() {
 
         {/* Right Actions */}
         <View style={styles.rightActions}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.actionBtn}
             onPress={() => handleLike(item.id)}
           >
-            <Ionicons 
-              name={item.isLiked ? "heart" : "heart-outline"} 
-              size={32} 
-              color={item.isLiked ? "#FF6B6B" : "white"} 
+            <Ionicons
+              name={item.isLiked ? "heart" : "heart-outline"}
+              size={32}
+              color={item.isLiked ? "#FF6B6B" : "white"}
             />
             <Text style={styles.actionCount}>
-              {item.likes > 1000 ? `${(item.likes / 1000).toFixed(1)}k` : item.likes}
+              {item.likes > 1000
+                ? `${(item.likes / 1000).toFixed(1)}k`
+                : item.likes}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.actionBtn}
             onPress={() => handleComment(item.id)}
           >
@@ -313,7 +346,7 @@ export default function ReelScreen() {
             <Text style={styles.actionCount}>{item.comments}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.actionBtn}
             onPress={() => handleShare(item.id)}
           >
@@ -359,7 +392,9 @@ export default function ReelScreen() {
             index,
           })}
           onMomentumScrollEnd={(event) => {
-            const index = Math.round(event.nativeEvent.contentOffset.y / screenData.height);
+            const index = Math.round(
+              event.nativeEvent.contentOffset.y / screenData.height
+            );
             setCurrentIndex(index);
           }}
           onViewableItemsChanged={onViewableItemsChanged}
@@ -373,32 +408,32 @@ export default function ReelScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
   },
   reelContainer: {
-    position: 'relative',
+    position: "relative",
   },
   backgroundImage: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
+    width: "100%",
+    height: "100%",
+    position: "absolute",
   },
   overlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: "rgba(0,0,0,0.2)",
   },
   header: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 50,
     paddingBottom: 10,
@@ -406,18 +441,18 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
   },
   cameraButton: {
     padding: 5,
   },
   contentContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 100,
     left: 0,
     right: 0,
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 16,
     zIndex: 10,
   },
@@ -426,13 +461,13 @@ const styles = StyleSheet.create({
     paddingRight: 80,
   },
   chefContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: "rgba(0,0,0,0.5)",
     borderRadius: 25,
     padding: 10,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   chefAvatar: {
     width: 46,
@@ -440,75 +475,75 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     marginRight: 12,
     borderWidth: 2,
-    borderColor: '#D4A373',
+    borderColor: "#D4A373",
   },
   chefInfo: {
     flex: 1,
   },
   chefNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 6,
   },
   chefName: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
     marginRight: 8,
     flex: 1,
   },
   followBtn: {
     paddingHorizontal: 16,
     paddingVertical: 6,
-    backgroundColor: '#D4A373',
+    backgroundColor: "#D4A373",
     borderRadius: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   followingBtn: {
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: 'white',
+    borderColor: "white",
   },
   followText: {
     fontSize: 13,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
   },
   followingText: {
-    color: 'white',
+    color: "white",
   },
   videoTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
     marginBottom: 8,
     lineHeight: 24,
   },
   videoDescription: {
     fontSize: 15,
-    color: '#e0e0e0',
+    color: "#e0e0e0",
     marginBottom: 12,
     lineHeight: 22,
   },
   tagsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginBottom: 16,
   },
   tag: {
     fontSize: 13,
-    color: '#D4A373',
+    color: "#D4A373",
     marginRight: 10,
     marginBottom: 4,
   },
   dishContainer: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: "rgba(0,0,0,0.6)",
     borderRadius: 16,
     padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    alignSelf: 'flex-start',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    alignSelf: "flex-start",
   },
   dishInfo: {
     flex: 1,
@@ -516,57 +551,57 @@ const styles = StyleSheet.create({
   },
   dishName: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
     marginBottom: 4,
   },
   dishPrice: {
     fontSize: 14,
-    color: '#D4A373',
-    fontWeight: 'bold',
+    color: "#D4A373",
+    fontWeight: "bold",
   },
   orderBtn: {
-    backgroundColor: '#D4A373',
+    backgroundColor: "#D4A373",
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   orderText: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
   },
   rightActions: {
-    position: 'absolute',
+    position: "absolute",
     right: 16,
     bottom: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   actionBtn: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 24,
     padding: 8,
   },
   actionCount: {
     fontSize: 12,
-    color: 'white',
+    color: "white",
     marginTop: 4,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
   },
   durationBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 100,
     right: 16,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: "rgba(0,0,0,0.7)",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
   },
   durationText: {
     fontSize: 12,
-    color: 'white',
-    fontWeight: 'bold',
+    color: "white",
+    fontWeight: "bold",
   },
 });
