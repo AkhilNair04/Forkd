@@ -27,7 +27,7 @@ export default function DishesScreen() {
 
   const { data: dishes = [] } = useQuery({
     queryKey: ["chefDishes", chefId],
-    queryFn: async () => fetchDishesByChef(chefId!),
+    queryFn: async () => fetchDishesByChef(chefId),
     enabled: !!chefId,
   });
 

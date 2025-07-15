@@ -34,9 +34,13 @@ export async function addDish(
     tags: string;
     price: number;
   }
-): Promise<{ success: boolean; dishId: string } | {
-  success: boolean; error: any 
-}> {
+): Promise<
+  | { success: boolean; dishId: string }
+  | {
+      success: boolean;
+      error: any;
+    }
+> {
   try {
     // 1. Generate new dish ID
     const dishId = await getNextId("Dish", "D");
@@ -62,20 +66,19 @@ export async function addDish(
 
     // 3. Create relation in Dish_To_Chef table
     const dishToChefId = await getNextId("Dish_To_Chef", "CD");
-    
 
     const { data: chefData, error: chefError } = await supabase
-    .from("Chef")
-    .select("id")
-    .eq("uuid", chefId)
-    .maybeSingle();
+      .from("Chef")
+      .select("id")
+      .eq("uuid", chefId)
+      .maybeSingle();
 
     console.log("Fetched Chef Data:", chefData?.id);
-console.log("Generated Dish_To_Chef ID:", dishToChefId);
+    console.log("Generated Dish_To_Chef ID:", dishToChefId);
     console.log("Chef ID:", chefData?.id);
     console.log("Dish ID:", dishId);
     console.log("Price:", dishData.price);
-    
+
     const { error: mappingError } = await supabase.from("Dish_To_Chef").insert([
       {
         id: dishToChefId,
