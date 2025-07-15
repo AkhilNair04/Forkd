@@ -1,6 +1,6 @@
 // app/checkout/index.tsx
 import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Alert } from "react-native";
-import { useCart } from "../../context/CartContext.tsx"; // <-- Add extension!
+import { useCart } from "../../context/CartContext"; // <-- Add extension!
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -51,16 +51,22 @@ export default function Checkout() {
     const amountInPaise = (total * 100).toString();
 
     try {
-      router.push({ 
-        pathname: "/payment", 
-        params: { 
+      router.push({
+        pathname: "/payment",
+        params: {
           total: amountInPaise,
-          address: address.replace(/\n/g, ' '),
+          address: address.replace(/\n/g, " "),
           phone,
-          instructions: instructions.replace(/\n/g, ' '),
-          paymentMethod
-        } 
+          instructions: instructions.replace(/\n/g, " "),
+          paymentMethod,
+          cart: JSON.stringify(cart),  // pass cart as JSON string
+          gst,
+          deliveryFee,
+          platformFee,
+          subtotal,
+        },
       });
+
     } catch (error) {
       Alert.alert("Navigation Error", "Unable to proceed to payment. Please try again.");
     }

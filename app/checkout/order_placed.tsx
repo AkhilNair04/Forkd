@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import {
   View,
@@ -25,25 +24,23 @@ export default function OrderPlacedScreen() {
   const [loading, setLoading] = useState(true);
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
   const router = useRouter();
-useEffect(() => {
-  const fetchOrderDetails = async () => {
-    try {
-      const rawData = (await AsyncStorage.getItem("orderDetails")) as unknown;
-      const orderData = rawData as string | null;
-      if (orderData !== null) {
-        setOrderDetails(JSON.parse(orderData));
+
+  useEffect(() => {
+    const fetchOrderDetails = async () => {
+      try {
+        const rawData = await AsyncStorage.getItem("orderDetails");
+        if (rawData !== null) {
+          setOrderDetails(JSON.parse(rawData));
+        }
+      } catch (error) {
+        console.error("Error fetching order details:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching order details:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  fetchOrderDetails();
-}, []);
-
-
+    fetchOrderDetails();
+  }, []);
 
   if (loading) {
     return (
@@ -73,7 +70,12 @@ useEffect(() => {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 80 }} // 👈 Adds space at bottom
+      >
+
         <View style={styles.successHeader}>
           <View style={styles.successIcon}>
             <Ionicons name="checkmark-circle" size={80} color="#4CAF50" />
@@ -155,9 +157,7 @@ useEffect(() => {
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Delivery Address</Text>
-              <Text
-                style={[styles.detailValue, { flex: 1, textAlign: "right" }]}
-              >
+              <Text style={[styles.detailValue, { flex: 1, textAlign: "right" }]}>
                 {orderDetails.address}
               </Text>
             </View>
@@ -168,9 +168,7 @@ useEffect(() => {
             {orderDetails.instructions && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Instructions</Text>
-                <Text
-                  style={[styles.detailValue, { flex: 1, textAlign: "right" }]}
-                >
+                <Text style={[styles.detailValue, { flex: 1, textAlign: "right" }]}>
                   {orderDetails.instructions}
                 </Text>
               </View>
@@ -220,26 +218,6 @@ useEffect(() => {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.push("/")}>
-          <Ionicons name="home-outline" size={24} color="#FF9100" />
-          <Text style={styles.navButtonText}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navButton}
-          onPress={() => router.push("/order-history")}
-        >
-          <Ionicons name="receipt-outline" size={24} color="#666" />
-          <Text style={[styles.navButtonText, { color: "#666" }]}>Orders</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navButton} disabled>
-          <Ionicons name="star-outline" size={24} color="#666" />
-          <Text style={[styles.navButtonText, { color: "#666" }]}>Rate</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -277,13 +255,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   orderId: { color: "#FF9100", fontSize: 14, fontWeight: "600" },
-  statusSection: { marginBottom: 32 },
   sectionTitle: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 16,
   },
+  statusSection: { marginBottom: 32 },
   statusContainer: {
     backgroundColor: "#1a1a1a",
     borderRadius: 12,
@@ -339,7 +317,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     flex: 1,
   },
-  actionButtons: { marginBottom: 20 },
+  actionButtons: { marginBottom: 40 },
   exploreButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -371,16 +349,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 8,
   },
-  bottomNav: {
-    flexDirection: "row",
-    backgroundColor: "#1a1a1a",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#333",
-  },
-  navButton: { flex: 1, alignItems: "center", paddingVertical: 8 },
-  navButtonText: { color: "#FF9100", fontSize: 12, marginTop: 4 },
   homeButton: {
     backgroundColor: "#FF9100",
     paddingHorizontal: 30,

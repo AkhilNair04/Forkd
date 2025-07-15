@@ -1,6 +1,14 @@
-// app/(tabs)/cart.tsx
+// app/checkout/cart.tsx
 import React from "react";
-import { View, Text, Image, TouchableOpacity, FlatList, StyleSheet, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
 import { useCart } from "../../context/CartContext";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,7 +16,11 @@ import { Ionicons } from "@expo/vector-icons";
 export default function CartScreen() {
   const { cart, updateQuantity, removeFromCart } = useCart();
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // Split carts by type
+  const dishCart = cart.filter((item) => item.type === "dish");
+  const chefCart = cart.filter((item) => item.type === "chef");
+
+  const total = dishCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const deliveryFee = 40;
   const platformFee = 5;
   const gst = Math.round((total + deliveryFee) * 0.05);
@@ -16,14 +28,14 @@ export default function CartScreen() {
 
   const Stepper = ({ id, qty }: { id: string; qty: number }) => (
     <View style={styles.stepperContainer}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.stepperButton}
         onPress={() => updateQuantity(id, Math.max(1, qty - 1))}
       >
         <Ionicons name="remove" size={16} color="#fff" />
       </TouchableOpacity>
       <Text style={styles.quantityText}>{qty}</Text>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.stepperButton}
         onPress={() => updateQuantity(id, qty + 1)}
       >
@@ -32,7 +44,7 @@ export default function CartScreen() {
     </View>
   );
 
-  const renderItem = ({ item }: any) => (
+  const renderDishItem = ({ item }: any) => (
     <View style={styles.cartItem}>
       <Image source={{ uri: item.image }} style={styles.itemImage} />
       <View style={styles.itemDetails}>
@@ -48,7 +60,31 @@ export default function CartScreen() {
       </View>
       <View style={styles.itemActions}>
         <Text style={styles.itemTotal}>₹{item.price * item.quantity}</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
+          style={styles.removeButton}
+          onPress={() => removeFromCart(item.id)}
+        >
+          <Ionicons name="trash-outline" size={18} color="#ff4444" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderChefItem = ({ item }: any) => (
+    <View style={styles.cartItem}>
+      <Image source={{ uri: item.image }} style={styles.itemImage} />
+      <View style={styles.itemDetails}>
+        <Text style={styles.itemName}>{item.name}</Text>
+        <Text style={styles.itemMealType}>Scheduled for {item.date}</Text>
+        <Text style={styles.chefName}>@ ₹{item.price}/hr</Text>
+        <View style={styles.itemBottom}>
+          <Text style={styles.itemPrice}>Hours: {item.quantity}</Text>
+          <Stepper id={item.id} qty={item.quantity} />
+        </View>
+      </View>
+      <View style={styles.itemActions}>
+        <Text style={styles.itemTotal}>₹{item.price * item.quantity}</Text>
+        <TouchableOpacity
           style={styles.removeButton}
           onPress={() => removeFromCart(item.id)}
         >
@@ -71,8 +107,10 @@ export default function CartScreen() {
         <View style={styles.emptyCart}>
           <Ionicons name="basket-outline" size={80} color="#666" />
           <Text style={styles.emptyCartText}>Your cart is empty</Text>
-          <Text style={styles.emptyCartSubtext}>Add some delicious dishes to get started</Text>
-          <TouchableOpacity 
+          <Text style={styles.emptyCartSubtext}>
+            Add some delicious dishes to get started
+          </Text>
+          <TouchableOpacity
             style={styles.browseButton}
             onPress={() => router.push("/(tabs)/dish")}
           >
@@ -84,50 +122,71 @@ export default function CartScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cart ({cart.length} items)</Text>
-        <TouchableOpacity onPress={() => cart.forEach(item => removeFromCart(item.id))}>
+        <TouchableOpacity onPress={() => cart.forEach((item) => removeFromCart(item.id))}>
           <Text style={styles.clearAllText}>Clear All</Text>
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={cart}
-        keyExtractor={(i) => i.id}
-        renderItem={renderItem}
-        style={styles.cartList}
-        showsVerticalScrollIndicator={false}
-      />
+      <>
+        <Text style={styles.sectionTitle}>Dishes</Text>
+        {dishCart.length === 0 ? (
+          <Text style={styles.emptySectionText}>No dishes added to cart</Text>
+        ) : (
+          <FlatList
+            data={dishCart}
+            keyExtractor={(i) => i.id}
+            renderItem={renderDishItem}
+            scrollEnabled={false}
+          />
+        )}
+      </>
+
+      <>
+        <Text style={styles.sectionTitle}>Chefs</Text>
+        {chefCart.length === 0 ? (
+          <Text style={styles.emptySectionText}>No chefs added to cart</Text>
+        ) : (
+          <FlatList
+            data={chefCart}
+            keyExtractor={(i) => i.id}
+            renderItem={renderChefItem}
+            scrollEnabled={false}
+          />
+        )}
+      </>
+
 
       <View style={styles.billContainer}>
         <Text style={styles.billTitle}>Bill Details</Text>
-        
+
         <View style={styles.billRow}>
           <Text style={styles.billLabel}>Subtotal</Text>
           <Text style={styles.billValue}>₹{total}</Text>
         </View>
-        
+
         <View style={styles.billRow}>
           <Text style={styles.billLabel}>Delivery Fee</Text>
           <Text style={styles.billValue}>₹{deliveryFee}</Text>
         </View>
-        
+
         <View style={styles.billRow}>
           <Text style={styles.billLabel}>Platform Fee</Text>
           <Text style={styles.billValue}>₹{platformFee}</Text>
         </View>
-        
+
         <View style={styles.billRow}>
           <Text style={styles.billLabel}>GST (5%)</Text>
           <Text style={styles.billValue}>₹{gst}</Text>
         </View>
-        
+
         <View style={styles.billDivider} />
-        
+
         <View style={styles.billRow}>
           <Text style={styles.billTotal}>Total</Text>
           <Text style={styles.billTotal}>₹{finalTotal}</Text>
@@ -144,15 +203,12 @@ export default function CartScreen() {
         </Text>
         <Ionicons name="arrow-forward" size={20} color="#fff" />
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#000",
-  },
+  container: { flex: 1, backgroundColor: "#000" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -161,16 +217,91 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
   },
-  headerTitle: {
+  headerTitle: { color: "#fff", fontSize: 20, fontWeight: "bold" },
+  clearAllText: { color: "#FF9100", fontSize: 14, fontWeight: "600" },
+  sectionTitle: {
     color: "#fff",
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
+    paddingHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 6,
   },
-  clearAllText: {
-    color: "#FF9100",
-    fontSize: 14,
-    fontWeight: "600",
+  cartItem: {
+    flexDirection: "row",
+    backgroundColor: "#1a1a1a",
+    borderRadius: 12,
+    padding: 12,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    alignItems: "center",
   },
+  itemImage: { width: 70, height: 70, borderRadius: 12 },
+  itemDetails: { flex: 1, marginLeft: 12 },
+  itemName: { color: "#fff", fontSize: 16, fontWeight: "600", marginBottom: 4 },
+  itemMealType: { color: "#999", fontSize: 12, marginBottom: 2 },
+  chefName: { color: "#FF9100", fontSize: 12, marginBottom: 8 },
+  itemBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  itemPrice: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  stepperContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#333",
+    borderRadius: 8,
+    padding: 4,
+  },
+  stepperButton: {
+    backgroundColor: "#FF9100",
+    borderRadius: 6,
+    width: 28,
+    height: 28,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  quantityText: { color: "#fff", marginHorizontal: 12, fontSize: 16, fontWeight: "600" },
+  itemActions: {
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    height: 70,
+  },
+  itemTotal: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  removeButton: { padding: 8 },
+  billContainer: {
+    backgroundColor: "#1a1a1a",
+    margin: 20,
+    padding: 16,
+    borderRadius: 12,
+  },
+  emptySectionText: {
+  color: "#888",
+  fontSize: 14,
+  paddingHorizontal: 20,
+  paddingBottom: 12,
+},
+  billTitle: { color: "#fff", fontSize: 18, fontWeight: "bold", marginBottom: 12 },
+  billRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  billLabel: { color: "#999", fontSize: 14 },
+  billValue: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  billDivider: { height: 1, backgroundColor: "#333", marginVertical: 12 },
+  billTotal: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  checkoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 20,
+    marginTop: 10,
+    padding: 16,
+    borderRadius: 12,
+  },
+  checkoutButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
   emptyCart: {
     flex: 1,
     justifyContent: "center",
@@ -201,136 +332,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
-  },
-  cartList: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  cartItem: {
-    flexDirection: "row",
-    backgroundColor: "#1a1a1a",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    alignItems: "center",
-  },
-  itemImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 12,
-  },
-  itemDetails: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  itemName: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  itemMealType: {
-    color: "#999",
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  chefName: {
-    color: "#FF9100",
-    fontSize: 12,
-    marginBottom: 8,
-  },
-  itemBottom: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  itemPrice: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  stepperContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#333",
-    borderRadius: 8,
-    padding: 4,
-  },
-  stepperButton: {
-    backgroundColor: "#FF9100",
-    borderRadius: 6,
-    width: 28,
-    height: 28,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  quantityText: {
-    color: "#fff",
-    marginHorizontal: 12,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  itemActions: {
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    height: 70,
-  },
-  itemTotal: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  removeButton: {
-    padding: 8,
-  },
-  billContainer: {
-    backgroundColor: "#1a1a1a",
-    margin: 20,
-    padding: 16,
-    borderRadius: 12,
-  },
-  billTitle: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
-  },
-  billRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  billLabel: {
-    color: "#999",
-    fontSize: 14,
-  },
-  billValue: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  billDivider: {
-    height: 1,
-    backgroundColor: "#333",
-    marginVertical: 12,
-  },
-  billTotal: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  checkoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginHorizontal: 20,
-    marginBottom: 40,
-    padding: 16,
-    borderRadius: 12,
-  },
-  checkoutButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
   },
 });

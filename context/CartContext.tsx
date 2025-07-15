@@ -1,17 +1,18 @@
+// context/CartContext.tsx
 import React, { createContext, useContext, useState } from "react";
 
-type CartItem = {
+export type CartItem = {
   id: string;
   name: string;
   image: string;
   price: number;
   quantity: number;
-  meal_type: string;
   chef?: {
-    id: string;
     name: string;
-    avatar: string;
+    id: string;
   };
+  type?: string; // auto-detected
+  date?: string;
 };
 
 type CartContextType = {
@@ -27,27 +28,34 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const addToCart = (item: CartItem) => {
-    setCart(prev =>
-      prev.find(i => i.id === item.id)
-        ? prev.map(i =>
-            i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i
+    const inferredType = item.id.startsWith("C") ? "chef" : "dish";
+    const itemWithType = { ...item, type: inferredType };
+
+    setCart((prev) =>
+      prev.find((i) => i.id === item.id)
+        ? prev.map((i) =>
+            i.id === item.id
+              ? { ...i, quantity: i.quantity + item.quantity }
+              : i
           )
-        : [...prev, item]
+        : [...prev, itemWithType]
     );
   };
 
   const removeFromCart = (id: string) => {
-    setCart(prev => prev.filter(i => i.id !== id));
+    setCart((prev) => prev.filter((i) => i.id !== id));
   };
 
   const updateQuantity = (id: string, qty: number) => {
-    setCart(prev =>
-      prev.map(i => (i.id === id ? { ...i, quantity: qty } : i))
+    setCart((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, quantity: qty } : i))
     );
   };
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity }}>
+    <CartContext.Provider
+      value={{ cart, addToCart, removeFromCart, updateQuantity }}
+    >
       {children}
     </CartContext.Provider>
   );
