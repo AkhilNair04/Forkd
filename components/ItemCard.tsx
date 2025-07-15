@@ -3,7 +3,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useCart } from "../context/CartContext";
-
 export default function ItemCard({
   item,
   isFavorite,
