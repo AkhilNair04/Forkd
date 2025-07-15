@@ -8,6 +8,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -37,11 +38,13 @@ const POST_IMAGES = [
 export default function ChefReelsPage() {
   const [userImages, setUserImages] = useState<string[]>([]);
   const [showMediaModal, setShowMediaModal] = useState(false);
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [chefName, setChefName] = useState(CHEF_PROFILE.name);
   const [chefId, setChefId] = useState<string | null>(null);
 
-  // Fetch chef name and ID from Chef table
+  // Fetch chef name and UUID from auth user
   const fetchChefData = async () => {
     try {
       // Get current authenticated user
@@ -55,73 +58,18 @@ export default function ChefReelsPage() {
         return;
       }
 
-      // First try to get chef info from user_profiles table
-      const { data: profileData, error: profileError } = await supabase
-        .from("user_profiles")
-        .select("full_name, user_type")
-        .eq("user_id", user.id)
-        .single();
+      // Get name from auth user metadata
+      const userName =
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email?.split("@")[0] ||
+        "Chef";
+      setChefName(userName);
+      console.log("✅ Chef name loaded from auth user:", userName);
 
-      if (profileError) {
-        console.error("❌ Error fetching user profile:", profileError.message);
-        return;
-      }
-
-      if (profileData?.user_type === "chef" && profileData?.full_name) {
-        setChefName(profileData.full_name);
-        console.log("✅ Chef name loaded from profile:", profileData.full_name);
-
-        // Try to get chef ID from Chef table using user_id
-        const { data: chefData, error: chefError } = await supabase
-          .from("Chef")
-          .select("id")
-          .eq("uuid", user.id)
-          .limit(1);
-
-        if (!chefError && chefData && chefData.length > 0) {
-          setChefId(chefData[0].id);
-          console.log("✅ Chef ID loaded:", chefData[0].id);
-        }
-        return;
-      }
-
-      // If not found in user_profiles, try the Chef table
-      const { data: chefData, error: chefError } = await supabase
-        .from("Chef")
-        .select("id, name")
-        .eq("uuid", user.id) // Try uuid field first
-        .limit(1);
-
-      if (!chefError && chefData && chefData.length > 0) {
-        setChefName(chefData[0].name);
-        setChefId(chefData[0].id);
-        console.log(
-          "✅ Chef data loaded from Chef table:",
-          chefData[0].name,
-          chefData[0].id
-        );
-        return;
-      }
-
-      // If still not found, try with id field (for Chef table with custom IDs like C0001)
-      const { data: chefData2, error: chefError2 } = await supabase
-        .from("Chef")
-        .select("id, name")
-        .eq("id", user.id)
-        .limit(1);
-
-      if (!chefError2 && chefData2 && chefData2.length > 0) {
-        setChefName(chefData2[0].name);
-        setChefId(chefData2[0].id);
-        console.log(
-          "✅ Chef data loaded from Chef table (id):",
-          chefData2[0].name,
-          chefData2[0].id
-        );
-        return;
-      }
-
-      console.log("⚠️ No chef profile found for user:", user.id);
+      // Use the auth user's UUID as the chef ID for folder structure
+      setChefId(user.id);
+      console.log("✅ Chef ID (UUID) loaded:", user.id);
     } catch (error) {
       console.error("❌ Error in fetchChefData:", error);
     }
@@ -315,6 +263,102 @@ export default function ChefReelsPage() {
     }
   };
 
+  const handleVideoPress = (videoUri: string) => {
+    setSelectedVideo(videoUri);
+    setShowVideoPlayer(true);
+  };
+
+  const handleDeleteVideo = async () => {
+    if (!selectedVideo || !chefId) {
+      Alert.alert("Error", "Cannot delete video. Please try again.");
+      return;
+    }
+
+    // Web-specific confirmation for better UX
+    if (Platform.OS === "web") {
+      const confirmed = window.confirm(
+        "Are you sure you want to delete this video? This action cannot be undone."
+      );
+      if (!confirmed) return;
+    } else {
+      Alert.alert(
+        "Delete Video",
+        "Are you sure you want to delete this video? This action cannot be undone.",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => await performDelete(),
+          },
+        ]
+      );
+      return;
+    }
+
+    // For web, perform delete directly
+    await performDelete();
+  };
+
+  const performDelete = async () => {
+    if (!selectedVideo || !chefId) {
+      console.error("❌ Cannot delete: missing video or chef ID");
+      return;
+    }
+
+    try {
+      // Extract filename from the video URL
+      const urlParts = selectedVideo.split("/");
+      const filename = urlParts[urlParts.length - 1];
+      const filePath = `${chefId}/${filename}`;
+
+      console.log(`🗑️ Deleting video: ${filePath} (Platform: ${Platform.OS})`);
+
+      // Delete from Supabase storage
+      const { error } = await supabase.storage
+        .from("chef-reels")
+        .remove([filePath]);
+
+      if (error) {
+        console.error("❌ Error deleting video:", error);
+        if (Platform.OS === "web") {
+          alert("Failed to delete video. Please try again.");
+        } else {
+          Alert.alert(
+            "Delete Failed",
+            "Failed to delete video. Please try again."
+          );
+        }
+        return;
+      }
+
+      // Remove from local state
+      setUserImages((prev) => prev.filter((uri) => uri !== selectedVideo));
+      setSelectedVideo(null);
+      setShowVideoPlayer(false);
+
+      console.log("✅ Video deleted successfully");
+      if (Platform.OS === "web") {
+        alert("Video deleted successfully!");
+      } else {
+        Alert.alert("Success", "Video deleted successfully!");
+      }
+    } catch (error) {
+      console.error("❌ Error in performDelete:", error);
+      if (Platform.OS === "web") {
+        alert("An error occurred while deleting the video.");
+      } else {
+        Alert.alert(
+          "Delete Failed",
+          "An error occurred while deleting the video."
+        );
+      }
+    }
+  };
+
   const renderGridItem = ({ item }: { item: any }) => {
     if (item.type === "add") {
       return (
@@ -328,14 +372,23 @@ export default function ChefReelsPage() {
     }
     // Display Video for Reels
     return (
-      <Video
-        source={{ uri: item.uri }}
-        style={styles.gridImg}
-        useNativeControls={false}
-        resizeMode={ResizeMode.COVER}
-        isLooping
-        shouldPlay={false} // Only play when user opens it (for grid)
-      />
+      <TouchableOpacity
+        style={styles.videoContainer}
+        onPress={() => handleVideoPress(item.uri)}
+        activeOpacity={0.8}
+      >
+        <Video
+          source={{ uri: item.uri }}
+          style={styles.gridImg}
+          useNativeControls={false}
+          resizeMode={ResizeMode.COVER}
+          isLooping
+          shouldPlay={false} // Only play when user opens it (for grid)
+        />
+        <View style={styles.playOverlay}>
+          <Ionicons name="play-circle" size={30} color="#fff" />
+        </View>
+      </TouchableOpacity>
     );
   };
 
@@ -459,6 +512,84 @@ export default function ChefReelsPage() {
               </View>
             </View>
           </Modal>
+
+          {/* Video Player Modal */}
+          <Modal
+            visible={showVideoPlayer}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowVideoPlayer(false)}
+          >
+            <View style={styles.videoPlayerOverlay}>
+              <View style={styles.videoPlayerContainer}>
+                <View style={styles.videoPlayerHeader}>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={handleDeleteVideo}
+                  >
+                    <Ionicons name="trash" size={24} color="#ff4444" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => setShowVideoPlayer(false)}
+                  >
+                    <Ionicons name="close" size={24} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+                {selectedVideo && (
+                  <View style={styles.videoWrapper}>
+                    {Platform.OS === "web" ? (
+                      <video
+                        src={selectedVideo}
+                        style={{
+                          width: 300,
+                          height: 533,
+                          backgroundColor: "#000",
+                          objectFit: "contain",
+                        }}
+                        controls
+                        autoPlay
+                        onError={(e) => {
+                          console.error("❌ HTML Video error:", e);
+                        }}
+                        onLoadedData={() => {
+                          console.log("✅ HTML Video loaded");
+                        }}
+                      />
+                    ) : (
+                      <Video
+                        source={{ uri: selectedVideo }}
+                        style={styles.videoPlayer}
+                        useNativeControls={true}
+                        resizeMode={ResizeMode.CONTAIN}
+                        isLooping={false}
+                        shouldPlay={true}
+                        isMuted={false}
+                        volume={1.0}
+                        onError={(error) => {
+                          console.error("❌ Expo Video error:", error);
+                        }}
+                        onLoad={(data) => {
+                          console.log("✅ Expo Video loaded:", data);
+                        }}
+                        onPlaybackStatusUpdate={(status) => {
+                          if (status.isLoaded) {
+                            console.log(
+                              "📱 Video status:",
+                              status.isPlaying ? "Playing" : "Paused"
+                            );
+                          }
+                        }}
+                      />
+                    )}
+                    <Text style={styles.debugText}>
+                      Video URL: {selectedVideo.substring(0, 50)}...
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </Modal>
         </View>
       </SafeAreaView>
     </RestrictedTabWrapper>
@@ -496,6 +627,24 @@ const styles = StyleSheet.create({
   statLabel: { color: "#bbb", fontSize: 14 },
   gridContainer: { paddingHorizontal: 6, paddingBottom: 50 },
   gridImg: { width: 115, height: 115, borderRadius: 12, margin: 4 },
+  videoContainer: {
+    position: "relative",
+    width: 115,
+    height: 115,
+    borderRadius: 12,
+    margin: 4,
+  },
+  playOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   addContainer: {
     width: 115,
     height: 115,
@@ -565,6 +714,60 @@ const styles = StyleSheet.create({
   uploadingSubtext: {
     color: "#bbb",
     fontSize: 14,
+    textAlign: "center",
+  },
+  videoPlayerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.9)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  videoPlayerContainer: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#000",
+  },
+  videoPlayerHeader: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 1,
+    flexDirection: "row",
+    gap: 10,
+  },
+  deleteButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  videoWrapper: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#000",
+  },
+  videoPlayer: {
+    width: 300,
+    height: 533, // 9:16 aspect ratio (300 * 16/9 = 533.33)
+    backgroundColor: "#000",
+  },
+  debugText: {
+    color: "#fff",
+    fontSize: 12,
+    marginTop: 10,
     textAlign: "center",
   },
 });
