@@ -1,6 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Stack, router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
+import { Stack, router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   Dimensions,
   FlatList,
@@ -13,34 +14,20 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import FilterModal from '../../components/FilterModal';
-import HeaderSection from '../../components/HeaderSection';
-import { dishes } from '../../constants/dishData';
-import { useCart } from '../../context/CartContext';
-import { getCurrentUserProfile } from '../../lib/supabase';
-import { useLocation } from '../../context/LocationContext';
+} from "react-native";
+import FilterModal from "../../components/FilterModal";
+import HeaderSection from "../../components/HeaderSection";
+import {
+  DishWithPrice,
+  fetchDishesWithPrices,
+} from "../../constants/fetchDishes";
+import { useCart } from "../../context/CartContext";
+import { useLocation } from "../../context/LocationContext";
+import { getCurrentUserProfile } from "../../lib/supabase";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
-interface Dish {
-  id: string;
-  name: string;
-  cuisine: string;
-  description: string;
-  ingredients: string;
-  image: string;
-  tags: string[];
-  rating: number;
-  isFavorite: boolean;
-  chefs: Array<{
-    name: string;
-    rating: number;
-    reviews: number;
-    price: number;
-    avatar: string;
-  }>;
-}
+// Using the DishWithPrice interface from fetchDishes
 
 interface UserProfile {
   id: string;
@@ -55,9 +42,7 @@ interface UserProfile {
 }
 
 export default function HomeScreen() {
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [featuredDishes, setFeaturedDishes] = useState<Dish[]>([]);
-  const [popularDishes, setPopularDishes] = useState<Dish[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -68,11 +53,16 @@ export default function HomeScreen() {
   const { location } = useLocation();
 
   // Use dynamic address from location hook
-  const selectedAddress = location?.address || 'Pick your location';
+  const selectedAddress = location?.address || "Pick your location";
+
+  // Fetch dishes with prices from Supabase
+  const { data: dishesWithPrices = [], isLoading } = useQuery({
+    queryKey: ["dishesWithPrices"],
+    queryFn: fetchDishesWithPrices,
+  });
 
   useEffect(() => {
     loadUserProfile();
-    loadDishes();
   }, []);
 
   const loadUserProfile = async () => {
@@ -80,17 +70,13 @@ export default function HomeScreen() {
     setUserProfile(profile);
   };
 
-  const loadDishes = () => {
-    // Get featured dishes (highest rated)
-    const featured = dishes
-      .sort((a, b) => b.rating - a.rating)
-      .slice(0, 5);
-    setFeaturedDishes(featured);
+  // Get featured dishes (highest rated)
+  const featuredDishes = dishesWithPrices
+    .sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating))
+    .slice(0, 5);
 
-    // Get popular dishes (random selection for demo)
-    const popular = dishes.slice(0, 6);
-    setPopularDishes(popular);
-  };
+  // Get popular dishes (first 6 dishes)
+  const popularDishes = dishesWithPrices.slice(0, 6);
 
   const toggleFavorite = (dishId: string) => {
     const newFavorites = new Set(favorites);
@@ -105,8 +91,8 @@ export default function HomeScreen() {
   const handleSearch = () => {
     if (searchQuery.trim()) {
       router.push({
-        pathname: '/(tabs)/dish',
-        params: { search: searchQuery }
+        pathname: "/(tabs)/dish",
+        params: { search: searchQuery },
       });
     }
   };
@@ -116,32 +102,46 @@ export default function HomeScreen() {
   };
 
   const navigateToFavorites = () => {
-    router.push('/favorites');
+    router.push("/favorites");
   };
 
   const navigateToCart = () => {
-    router.push('/checkout/cart');
+    router.push("/checkout/cart");
   };
 
   // Filter sections for the filter modal
   const filterSections = [
-    { 
-      label: "Cuisine Type", 
-      options: ["Chinese", "Italian", "Indian", "Korean", "American", "Mexican"], 
-      selected: selectedCuisines, 
-      setSelected: setSelectedCuisines 
+    {
+      label: "Cuisine Type",
+      options: [
+        "Chinese",
+        "Italian",
+        "Indian",
+        "Korean",
+        "American",
+        "Mexican",
+      ],
+      selected: selectedCuisines,
+      setSelected: setSelectedCuisines,
     },
-    { 
-      label: "Dietary Preferences", 
-      options: ["Vegan", "Non-veg", "Vegetarian", "Gluten-free", "Halal", "Kosher"], 
-      selected: selectedDietary, 
-      setSelected: setSelectedDietary 
+    {
+      label: "Dietary Preferences",
+      options: [
+        "Vegan",
+        "Non-veg",
+        "Vegetarian",
+        "Gluten-free",
+        "Halal",
+        "Kosher",
+      ],
+      selected: selectedDietary,
+      setSelected: setSelectedDietary,
     },
-    { 
-      label: "Allergies", 
-      options: ["Dairy", "Peanut", "Gluten", "Soy", "Egg", "Shellfish"], 
-      selected: selectedAllergies, 
-      setSelected: setSelectedAllergies 
+    {
+      label: "Allergies",
+      options: ["Dairy", "Peanut", "Gluten", "Soy", "Egg", "Shellfish"],
+      selected: selectedAllergies,
+      setSelected: setSelectedAllergies,
     },
   ];
 
@@ -153,14 +153,14 @@ export default function HomeScreen() {
     router.push(`/chef-details/${chefId}`);
   };
 
-  const renderFeaturedDish = ({ item }: { item: Dish }) => (
+  const renderFeaturedDish = ({ item }: { item: DishWithPrice }) => (
     <TouchableOpacity
       style={styles.featuredCard}
       onPress={() => navigateToDishDetails(item.id)}
     >
-      <Image source={{ uri: item.image }} style={styles.featuredImage} />
+      <Image source={{ uri: item.imageUrl }} style={styles.featuredImage} />
       <View style={styles.featuredOverlay}>
-        <Text style={styles.featuredTitle}>{item.name}</Text>
+        <Text style={styles.featuredTitle}>{item.title}</Text>
         <Text style={styles.featuredCuisine}>{item.cuisine}</Text>
         <View style={styles.ratingContainer}>
           <Ionicons name="star" size={14} color="#FFD700" />
@@ -180,14 +180,16 @@ export default function HomeScreen() {
     </TouchableOpacity>
   );
 
-  const renderPopularDish = ({ item }: { item: Dish }) => (
+  const renderPopularDish = ({ item }: { item: DishWithPrice }) => (
     <TouchableOpacity
       style={styles.popularCard}
       onPress={() => navigateToDishDetails(item.id)}
     >
-      <Image source={{ uri: item.image }} style={styles.popularImage} />
+      <Image source={{ uri: item.imageUrl }} style={styles.popularImage} />
       <View style={styles.popularContent}>
-        <Text style={styles.popularTitle} numberOfLines={2}>{item.name}</Text>
+        <Text style={styles.popularTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
         <Text style={styles.popularCuisine}>{item.cuisine}</Text>
         <View style={styles.popularFooter}>
           <View style={styles.ratingContainer}>
@@ -195,7 +197,7 @@ export default function HomeScreen() {
             <Text style={styles.popularRating}>{item.rating}</Text>
           </View>
           {item.chefs && item.chefs[0] && (
-            <Text style={styles.priceText}>${item.chefs[0].price / 100}</Text>
+            <Text style={styles.priceText}>₹{item.chefs[0].price}</Text>
           )}
         </View>
       </View>
@@ -207,8 +209,8 @@ export default function HomeScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
-        <ScrollView 
-          style={styles.container} 
+        <ScrollView
+          style={styles.container}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           bounces={false}
@@ -221,20 +223,25 @@ export default function HomeScreen() {
             <View style={styles.greetingContent}>
               <View>
                 <Text style={styles.greeting}>
-                  Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}
+                  Good{" "}
+                  {new Date().getHours() < 12
+                    ? "Morning"
+                    : new Date().getHours() < 18
+                    ? "Afternoon"
+                    : "Evening"}
                 </Text>
                 <Text style={styles.userName}>
-                  {userProfile?.profile?.full_name || 'Food Lover'}
+                  {userProfile?.profile?.full_name || "Food Lover"}
                 </Text>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.profileButton}
-                onPress={() => router.push('/(tabs)/profile')}
+                onPress={() => router.push("/(tabs)/profile")}
               >
                 {userProfile?.profile?.avatar_url ? (
-                  <Image 
-                    source={{ uri: userProfile.profile.avatar_url }} 
-                    style={styles.profileImage} 
+                  <Image
+                    source={{ uri: userProfile.profile.avatar_url }}
+                    style={styles.profileImage}
                   />
                 ) : (
                   <View style={styles.profilePlaceholder}>
@@ -248,7 +255,12 @@ export default function HomeScreen() {
           {/* Search Bar */}
           <View style={styles.searchContainer}>
             <View style={styles.searchBar}>
-              <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+              <Ionicons
+                name="search"
+                size={20}
+                color="#999"
+                style={styles.searchIcon}
+              />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search for dishes, cuisines..."
@@ -259,35 +271,38 @@ export default function HomeScreen() {
                 returnKeyType="search"
               />
             </View>
-            <TouchableOpacity style={styles.filterButton} onPress={handleFilter}>
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={handleFilter}
+            >
               <Ionicons name="options" size={20} color="#C67C4E" />
             </TouchableOpacity>
           </View>
 
           {/* Quick Actions */}
           <View style={styles.quickActions}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => router.push('/(tabs)/dish')}
+              onPress={() => router.push("/(tabs)/dish")}
             >
               <Ionicons name="restaurant" size={24} color="#C67C4E" />
               <Text style={styles.actionText}>Browse</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.actionButton}
-              onPress={() => router.push('/(tabs)/chef')}
+              onPress={() => router.push("/(tabs)/chef")}
             >
               <Ionicons name="people" size={24} color="#C67C4E" />
               <Text style={styles.actionText}>Chefs</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.actionButton}
               onPress={navigateToFavorites}
             >
               <Ionicons name="heart" size={24} color="#C67C4E" />
               <Text style={styles.actionText}>Favorites</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.actionButton}
               onPress={navigateToCart}
             >
@@ -300,7 +315,7 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Featured Dishes</Text>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/dish')}>
+              <TouchableOpacity onPress={() => router.push("/(tabs)/dish")}>
                 <Text style={styles.seeAll}>See All</Text>
               </TouchableOpacity>
             </View>
@@ -318,7 +333,7 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Popular Near You</Text>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/dish')}>
+              <TouchableOpacity onPress={() => router.push("/(tabs)/dish")}>
                 <Text style={styles.seeAll}>See All</Text>
               </TouchableOpacity>
             </View>
@@ -334,11 +349,11 @@ export default function HomeScreen() {
         </ScrollView>
 
         {/* Filter Modal */}
-        <FilterModal 
-          visible={showFilterModal} 
-          onClose={() => setShowFilterModal(false)} 
-          onApply={() => setShowFilterModal(false)} 
-          sections={filterSections} 
+        <FilterModal
+          visible={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          onApply={() => setShowFilterModal(false)}
+          sections={filterSections}
         />
       </SafeAreaView>
     </>
@@ -349,31 +364,31 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#000",
-    width: '100%',
-    minHeight: '100%',
+    width: "100%",
+    minHeight: "100%",
   },
   container: {
     flex: 1,
     backgroundColor: "#000",
-    width: '100%',
+    width: "100%",
   },
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 40,
     paddingBottom: 100,
-    minHeight: '100%',  
-    width: '100%',
+    minHeight: "100%",
+    width: "100%",
     flexGrow: 1,
   },
   greetingSection: {
     marginBottom: 20,
-    width: '100%',
+    width: "100%",
   },
   greetingContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
   },
   greeting: {
     fontSize: 16,
@@ -382,38 +397,38 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
   },
   profileButton: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   profileImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   profilePlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#1a1a1a',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#1a1a1a",
+    justifyContent: "center",
+    alignItems: "center",
     borderRadius: 25,
   },
   searchContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 25,
     gap: 12,
-    width: '100%',
+    width: "100%",
   },
   searchBar: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1a1a1a',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1a1a1a",
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 50,
@@ -424,54 +439,54 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#fff',
+    color: "#fff",
   },
   filterButton: {
     width: 50,
     height: 50,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: "#1a1a1a",
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    justifyContent: "space-around",
     marginBottom: 30,
-    width: '100%',
+    width: "100%",
   },
   actionButton: {
-    alignItems: 'center',
+    alignItems: "center",
     padding: 15,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: "#1a1a1a",
     borderRadius: 15,
     minWidth: 70,
   },
   actionText: {
     marginTop: 8,
     fontSize: 12,
-    color: '#fff',
-    fontWeight: '500',
+    color: "#fff",
+    fontWeight: "500",
   },
   section: {
     marginBottom: 30,
-    width: '100%',
+    width: "100%",
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 15,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
   },
   seeAll: {
     fontSize: 14,
-    color: '#C67C4E',
-    fontWeight: '500',
+    color: "#C67C4E",
+    fontWeight: "500",
   },
   featuredList: {
     paddingLeft: 0,
@@ -481,71 +496,71 @@ const styles = StyleSheet.create({
     height: 180,
     marginRight: 15,
     borderRadius: 15,
-    overflow: 'hidden',
-    position: 'relative',
+    overflow: "hidden",
+    position: "relative",
   },
   featuredImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   featuredOverlay: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: "rgba(0,0,0,0.6)",
     padding: 15,
   },
   featuredTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
     marginBottom: 4,
   },
   featuredCuisine: {
     fontSize: 14,
-    color: '#ddd',
+    color: "#ddd",
     marginBottom: 8,
   },
   heartIcon: {
-    position: 'absolute',
+    position: "absolute",
     top: 12,
     right: 12,
     width: 35,
     height: 35,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: "rgba(0,0,0,0.5)",
     borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   ratingText: {
     marginLeft: 4,
     fontSize: 14,
-    color: '#fff',
-    fontWeight: '500',
+    color: "#fff",
+    fontWeight: "500",
   },
   popularRow: {
-    justifyContent: 'space-between',
-    width: '100%',
+    justifyContent: "space-between",
+    width: "100%",
   },
   popularCard: {
     width: (width - 50) / 2,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: "#1a1a1a",
     borderRadius: 15,
     marginBottom: 15,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   popularImage: {
-    width: '100%',
+    width: "100%",
     height: 120,
     borderTopLeftRadius: 15,
     borderTopRightRadius: 15,
@@ -555,29 +570,29 @@ const styles = StyleSheet.create({
   },
   popularTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
     marginBottom: 4,
   },
   popularCuisine: {
     fontSize: 12,
-    color: '#999',
+    color: "#999",
     marginBottom: 8,
   },
   popularFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   popularRating: {
     marginLeft: 4,
     fontSize: 12,
-    color: '#999',
-    fontWeight: '500',
+    color: "#999",
+    fontWeight: "500",
   },
   priceText: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#C67C4E',
+    fontWeight: "bold",
+    color: "#C67C4E",
   },
 });
