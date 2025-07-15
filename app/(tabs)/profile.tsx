@@ -362,12 +362,7 @@ export default function ProfileScreen() {
                 icon="clock"
                 title="Order History"
                 subtitle="View your past orders"
-                onPress={() =>
-                  Alert.alert(
-                    "Coming Soon",
-                    "Order history feature will be available soon!"
-                  )
-                }
+                onPress={() => router.replace("/order-history")}
               />
               <MenuOption
                 icon="message-circle"

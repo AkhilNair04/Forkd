@@ -8,9 +8,11 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "@/constants/supabase";
+
 
 const DELIVERY_STAGES = [
   "Looking for a delivery partner",
@@ -32,9 +34,13 @@ type OrderDetails = {
 };
 
 export default function OrderPlacedScreen() {
+
+  const router = useRouter();
+  const { orderId } = useLocalSearchParams();
+  
   const [loading, setLoading] = useState(true);
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
-  const router = useRouter();
+  
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
