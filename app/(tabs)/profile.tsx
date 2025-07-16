@@ -308,10 +308,6 @@ export default function ProfileScreen() {
               <Text style={styles.joinDate}>
                 Member since {userProfile.joinDate || "Unknown"}
               </Text>
-              {/* Debug info - remove this after fixing */}
-              <Text style={styles.debugText}>
-                Debug: Name="{userProfile.name}", Email="{userProfile.email}"
-              </Text>
             </View>
             <TouchableOpacity
               style={styles.editButton}
