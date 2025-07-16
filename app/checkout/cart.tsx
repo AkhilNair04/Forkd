@@ -146,7 +146,6 @@ export default function CartScreen() {
           />
         )}
       </>
-
       <>
         <Text style={styles.sectionTitle}>Chefs</Text>
         {chefCart.length === 0 ? (
