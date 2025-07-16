@@ -1,3 +1,5 @@
+import { supabase } from "@/constants/supabase";
+import { addDish } from "@/constants/uploadDish";
 import { AntDesign, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, router } from "expo-router";
@@ -53,27 +55,53 @@ export default function AddDishScreen() {
       selectedCategory &&
       price.trim() &&
       quantity > 0 &&
-      image &&
       ingredients.trim() &&
       cuisine.trim() &&
       description.trim() &&
       contains.trim()
   );
 
-  const handleAddDish = () => {
-    console.log("Button clicked");
-    console.log({
-      itemName,
-      selectedCategory,
-      price,
-      quantity,
-      image,
-      cuisine,
-      ingredients,
-      description,
-      contains
-    });
-    alert("Dish Added!");
+  const handleAddDish = async () => {
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        alert("Not logged in");
+        return;
+      }
+
+      const userId = user?.id || "e62e3039-4e1a-4def-9647-debeed5f40be";
+      const chefId = userId;
+
+      // ✅ Step 2: Prepare dish payload
+      const dishPayload = {
+        title: itemName,
+        description,
+        cuisine,
+        ingredients,
+        contains,
+        tags: selectedCategory,
+        price: parseFloat(price),
+        imageUri: image || "", // <- pass URI to backend
+      };
+
+      // ✅ Step 3: Call addDish with chefId
+      const result = await addDish(chefId, dishPayload);
+
+      if ("success" in result && result.success) {
+        alert("Dish Added Successfully!");
+        handleReset();
+        router.back();
+      } else {
+        alert("Error: " + result);
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      alert("Something went wrong!");
+    }
   };
 
   const handleReset = () => {
@@ -269,19 +297,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     color: "#C67C4E",
-    fontWeight: "200",
+    fontWeight: "bold",
     paddingTop: 10,
   },
   reset: {
     color: "#C67C4E",
-    fontWeight: "100",
+    fontWeight: "bold",
     fontSize: 20,
   },
   label: {
     color: "#fff",
     marginBottom: 6,
     fontSize: 16,
-    fontWeight: "100",
+    fontWeight: "bold",
     letterSpacing: 1,
   },
   input: {
@@ -361,7 +389,7 @@ const styles = StyleSheet.create({
   quantity: {
     fontSize: 18,
     color: "#fff",
-    fontWeight: "600",
+    fontWeight: "900",
   },
   roundBackButton: {
     width: 36,

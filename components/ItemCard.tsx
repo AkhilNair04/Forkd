@@ -3,7 +3,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useCart } from "../context/CartContext";
-
 export default function ItemCard({
   item,
   isFavorite,
@@ -18,7 +17,7 @@ export default function ItemCard({
   onToggleDone?: () => void;
 }) {
   const [favorite, setFavorite] = useState(isFavorite);
-  const { addToCart } = useCart();
+  
 
   useEffect(() => {
     setFavorite(isFavorite);
@@ -60,24 +59,6 @@ export default function ItemCard({
           <Ionicons name="arrow-forward" size={16} color="white" />
         </TouchableOpacity>
       </View>
-
-      {type === "chef" && (
-        <TouchableOpacity
-          onPress={() =>
-            addToCart({
-              id: item.id,
-              name: item.name,
-              price: item.price || 400,
-              image: item.imageUrl,
-              meal_type: item.cuisine,
-              quantity: 1,
-            })
-          }
-          style={styles.cartButton}
-        >
-          <Text style={styles.cartButtonText}>Add to Cart</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }

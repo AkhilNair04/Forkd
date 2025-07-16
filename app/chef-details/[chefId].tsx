@@ -3,7 +3,9 @@ import ScheduleDatePicker from "@/components/ScheduleDatePicker";
 import TimeSelector from "@/components/TimeSelector";
 import { Chef, fetchChefs } from "@/constants/fetchChefs";
 import { supabase } from "@/constants/supabase";
+import { useCart } from "@/context/CartContext";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
@@ -20,6 +22,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ChefDetails() {
   const { chefId } = useLocalSearchParams();
+  const { addToCart } = useCart();
 
   const { data: chefs = [] } = useQuery({
     queryKey: ["chefs"],
@@ -55,52 +58,69 @@ export default function ChefDetails() {
 
   const upcomingDays = getUpcomingDays();
 
-  
-  const handleHireChef = async() => {
+
+  const handleHireChef = async () => {
     try {
-    // Get the logged-in user's ID
-    const { data: userData, error: authError } = await supabase.auth.getUser();
-    if (authError || !userData?.user) {
-      console.error("User not authenticated");
-      return;
-    }
+      // Get the logged-in user's ID
+      const { data: userData, error: authError } =
+        await supabase.auth.getUser();
+      if (authError || !userData?.user) {
+        console.error("User not authenticated");
+        return;
+      }
 
-    const userId = userData.user.id || "ae89e1e6-e013-45c1-8841-60f40c618110";
+      const userId = userData?.user?.id;
 
-    // Validate inputs
-    if (!chefId || !startTime || !hours || selectedDay === null) {
-      console.warn("Please fill all required fields");
-      return;
-    }
+      // Validate inputs
+      if (!chefId || !startTime || !hours || selectedDay === null) {
+        console.warn("Please fill all required fields");
+        return;
+      }
 
-    // Get selected date
-    const scheduledDate = upcomingDays[selectedDay]?.fullDate;
-    if (!scheduledDate) {
-      console.warn("Invalid date selected");
-      return;
-    }
+      // Get selected date
+      const scheduledDate = upcomingDays[selectedDay]?.fullDate;
+      if (!scheduledDate) {
+        console.warn("Invalid date selected");
+        return;
+      }
 
-    // Insert into Hire_Chef table
-    const { error: insertError } = await supabase.from("hire_chef").insert([
-      {
-        user_id: userId,
-        chef_id: chefId,
-        scheduled_date: scheduledDate.toISOString().split("T")[0], // format: YYYY-MM-DD
-        start_time: startTime,
+      const hirePayload = {
+        userId,
+        chefId,
+        scheduledDate: scheduledDate.toISOString(),
+        startTime,
         hours,
-        note: note.trim(),
-      },
-    ]);
+        note,
+      };
+      await AsyncStorage.setItem("pendingHire", JSON.stringify(hirePayload));
 
-    if (insertError) {
-      console.error("Error inserting data:", insertError);
-    } else {
-      console.log("Chef hired successfully!");
-      router.push("/confirmation"); // Or show a toast/modal
+      // console.log("Hire data saved to AsyncStorage:", hirePayload);
+      Cart();
+      const stored = await AsyncStorage.getItem("pendingHire");
+      if (stored) {
+        const hireData = JSON.parse(stored);
+        console.log("✅ Retrieved hire data:", hireData);
+        return hireData;
+      } else {
+        console.log("⚠️ No hire data found in AsyncStorage.");
+        return null;
+      }
+    } catch (err) {
+      console.error("Unexpected error:", err);
     }
-  } catch (err) {
-    console.error("Unexpected error:", err);
-  }
+  };
+
+  const Cart = () => {
+    addToCart({
+      id: chefId as string,
+      name: chef?.name ?? "",
+      price: chef?.pricePerHour || 400,
+      image: chef?.imageUrl ?? "",
+      type: chef?.cuisine ?? "",
+      quantity: 1,
+    });
+
+    router.push("/checkout/cart");
   };
 
   if (!chef) {
