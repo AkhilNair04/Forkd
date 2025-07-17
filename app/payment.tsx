@@ -1,51 +1,69 @@
-import React, { useState, useEffect } from "react";
+import { supabase } from "@/constants/supabase";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Location from "expo-location";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
   Text,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator
+  View,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '@/constants/supabase';
-import * as Location from 'expo-location';
 
 export default function PaymentScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPayButton, setShowPayButton] = useState(false);
 
+  // Get the payment method from checkout page params
+  const paymentMethod = (params.paymentMethod as string) || "cod";
   const total = (params.total as string) || "0";
   const address = (params.address as string) || "";
   const phone = (params.phone as string) || "";
   const instructions = (params.instructions as string) || "";
-  const paymentMethod = (params.paymentMethod as string) || "cod";
   const amount = parseInt(total) / 100;
 
+  // Auto-select the payment method that was chosen in checkout
+  const [selectedMethod, setSelectedMethod] = useState<string>(paymentMethod);
+
+  // Insert dish order to Supabase Orders table
   const insertOrderToSupabase = async ({
-    userId, items, address, lat, lng, subtotal, gst, deliveryFee, paymentMethod, phone
+    userId,
+    items,
+    address,
+    lat,
+    lng,
+    subtotal,
+    gst,
+    deliveryFee,
+    paymentMethod,
+    phone,
   }: any) => {
-    const { data, error } = await supabase.from("Orders").insert({
-      user_id: userId,
-      rider_id: null,
-      items,
-      order_time: new Date().toISOString(),
-      delivery_lat: lat,
-      delivery_lng: lng,
-      delivery_address: address,
-      status: "open",
-      total_amount: subtotal,
-      tax_amount: gst,
-      delivery_fee: deliveryFee,
-      payment_status: "paid",
-      payment_method: paymentMethod,
-      payment_time: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      phone,
-    }).select("order_id"); // fetch inserted order UUID
+    const { data, error } = await supabase
+      .from("Orders")
+      .insert({
+        user_id: userId,
+        rider_id: null,
+        items,
+        order_time: new Date().toISOString(),
+        delivery_lat: lat,
+        delivery_lng: lng,
+        delivery_address: address,
+        status: "open",
+        total_amount: subtotal,
+        tax_amount: gst,
+        delivery_fee: deliveryFee,
+        payment_status: "paid",
+        payment_method: paymentMethod,
+        payment_time: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        phone,
+      })
+      .select("order_id");
 
     if (error) {
       console.error("❌ Supabase insert error:", error.message);
@@ -55,72 +73,195 @@ export default function PaymentScreen() {
     return data?.[0]?.order_id;
   };
 
-  const handlePayment = async (method: "razorpay" | "cod") => {
-    setIsProcessing(true);
+  function calculateEndTime(startTime: string, hours: number): string {
+    const [hourStr, minStr] = startTime.split(":");
+    const start = new Date();
+    start.setHours(parseInt(hourStr, 10), parseInt(minStr, 10), 0, 0);
+    start.setHours(start.getHours() + hours);
+    // Return as "HH:mm"
+    return start.toTimeString().slice(0, 5);
+  }
 
-    setTimeout(async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id;
-
-      const cart = await AsyncStorage.getItem("cartItems");
-      const items = cart ? JSON.parse(cart) : [];
-
-      const dishesOnly = items.filter((item: any) => item.id?.startsWith("D"));
-
-      const { coords } = await Location.getCurrentPositionAsync({});
-      const lat = coords.latitude;
-      const lng = coords.longitude;
-
-      const subtotal = amount;
-      const gst = Math.round(subtotal * 0.05);
-      const deliveryFee = 30;
-
-      const orderId = await insertOrderToSupabase({
-        userId,
-        items: dishesOnly,
+  // Insert chef hire to Supabase hire_chef table
+  const insertHireChefToSupabase = async ({
+    userId,
+    chefId,
+    scheduledDate,
+    startTime,
+    endTime,
+    hours,
+    note,
+    address,
+    lat,
+    lng,
+    amount,
+    tax,
+    paymentStatus,
+    paymentMethod,
+    paymentTime,
+    phone,
+  }: any) => {
+    const end = calculateEndTime(startTime, hours);
+    const { data, error } = await supabase
+      .from("hire_chef")
+      .insert({
+        user_id: userId,
+        chef_id: chefId,
+        scheduled_date: scheduledDate,
+        start_time: startTime,
+        end_time: end,
+        hours,
+        note,
         address,
         lat,
         lng,
-        subtotal,
-        gst,
-        deliveryFee,
-        paymentMethod: method,
-        phone
-      });
-
-      if (!orderId) {
-        Alert.alert("Error", "Order failed. Please try again.");
-        setIsProcessing(false);
-        return;
-      }
-
-      await AsyncStorage.setItem("orderId", orderId); // store UUID
-      await AsyncStorage.setItem("orderDetails", JSON.stringify({
-        amount: subtotal,
-        address,
+        amount,
+        tax_amount: tax,
+        payment_status: paymentStatus,
+        payment_method: paymentMethod,
+        payment_time: paymentTime,
+        updated_at: new Date().toISOString(),
         phone,
-        instructions,
-        paymentMethod: method,
-        orderId
-      }));
+        status: "requested",
+      })
+      .select("id"); // fetch inserted hire UUID
 
-      setIsProcessing(false);
-      Alert.alert(
-        method === "razorpay" ? "Payment Successful!" : "Order Placed!",
-        method === "razorpay"
-          ? "Your payment has been processed successfully."
-          : "Your order has been placed successfully. Pay when delivered.",
-        [{ text: "Track Order", onPress: () => router.push("/checkout/order_placed") }]
-      );
-    }, method === "razorpay" ? 2000 : 1500);
+    if (error) {
+      console.error("❌ Supabase insert error (hire_chef):", error.message);
+      return null;
+    }
+
+    return data?.[0]?.id;
   };
 
+  // Only run all logic when pay button is pressed
+  const handlePay = async () => {
+    setIsProcessing(true);
+
+    setTimeout(
+      async () => {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        const userId = user?.id;
+
+        // Dish order logic
+        const cart = await AsyncStorage.getItem("cartItems");
+        const items = cart ? JSON.parse(cart) : [];
+
+        const dishesOnly = items.filter((item: any) =>
+          item.id?.startsWith("D")
+        );
+
+        // Get location (for both orders and chef hire, if needed)
+        let lat = null,
+          lng = null;
+        try {
+          const { coords } = await Location.getCurrentPositionAsync({});
+          lat = coords.latitude;
+          lng = coords.longitude;
+        } catch (e) {
+          // fallback or warn
+        }
+
+        // Place dish order if cart has dishes
+        if (dishesOnly.length > 0) {
+          const subtotal = amount;
+          const gst = Math.round(subtotal * 0.05);
+          const deliveryFee = 30;
+
+          const orderId = await insertOrderToSupabase({
+            userId,
+            items: dishesOnly,
+            address,
+            lat,
+            lng,
+            subtotal,
+            gst,
+            deliveryFee,
+            paymentMethod: selectedMethod,
+            phone,
+          });
+
+          if (!orderId) {
+            Alert.alert("Error", "Order failed. Please try again.");
+            setIsProcessing(false);
+            return;
+          }
+
+          await AsyncStorage.setItem("orderId", orderId); // store UUID
+          await AsyncStorage.setItem(
+            "orderDetails",
+            JSON.stringify({
+              amount: subtotal,
+              address,
+              phone,
+              instructions,
+              paymentMethod: selectedMethod,
+              orderId,
+            })
+          );
+        }
+
+        // Chef hire logic
+        const pendingHire = await AsyncStorage.getItem("pendingHire");
+        if (pendingHire) {
+          const hire = JSON.parse(pendingHire);
+
+          // Compose payload for hire_chef
+          const hirePayload = {
+            userId,
+            chefId: hire.chefId,
+            scheduledDate: hire.scheduledDate.split("T")[0], // ISO to yyyy-mm-dd
+            startTime: hire.startTime,
+            endTime: null,
+            hours: hire.hours,
+            note: hire.note,
+            address,
+            lat,
+            lng,
+            amount,
+            tax: Math.round(amount * 0.05),
+            paymentStatus: "paid",
+            paymentMethod: selectedMethod,
+            paymentTime: new Date().toISOString(),
+            phone,
+          };
+
+          const hireChefId = await insertHireChefToSupabase(hirePayload);
+
+          if (!hireChefId) {
+            Alert.alert("Error", "Chef hiring failed. Please try again.");
+            setIsProcessing(false);
+            return;
+          }
+
+          await AsyncStorage.setItem("hireChefId", hireChefId);
+          await AsyncStorage.removeItem("pendingHire"); // clear after success
+        }
+
+        setIsProcessing(false);
+        Alert.alert(
+          selectedMethod === "razorpay" ? "Payment Successful!" : "Order Placed!",
+          selectedMethod === "razorpay"
+            ? "Your payment has been processed successfully."
+            : "Your order has been placed successfully. Pay when delivered.",
+          [
+            {
+              text: "Track Order",
+              onPress: () => router.push("/checkout/order_placed"),
+            },
+          ]
+        );
+      },
+      selectedMethod === "razorpay" ? 2000 : 1500
+    );
+  };
+
+  // Show pay button immediately since method is already selected
   useEffect(() => {
-    setTimeout(() => {
-      if (paymentMethod === "razorpay") handlePayment("razorpay");
-      else handlePayment("cod");
-    }, 1000);
-  }, [paymentMethod]);
+    setShowPayButton(true);
+  }, []);
 
   if (isProcessing) {
     return (
@@ -149,31 +290,54 @@ export default function PaymentScreen() {
           <Text style={styles.orderDetails}>Delivery to: {address}</Text>
           <Text style={styles.orderDetails}>Phone: {phone}</Text>
           {instructions ? (
-            <Text style={styles.orderDetails}>Instructions: {instructions}</Text>
+            <Text style={styles.orderDetails}>
+              Instructions: {instructions}
+            </Text>
           ) : null}
         </View>
 
         <View style={styles.paymentMethods}>
-          <Text style={styles.sectionTitle}>Processing Payment</Text>
+          <Text style={styles.sectionTitle}>Payment Method</Text>
+          
+          {/* Only show the selected payment method */}
           {paymentMethod === "razorpay" ? (
-            <View style={styles.selectedPaymentMethod}>
+            <View style={[styles.paymentOption, styles.paymentOptionSelected]}>
               <Ionicons name="card-outline" size={32} color="#FF9100" />
               <Text style={styles.selectedMethodTitle}>Online Payment</Text>
-              <Text style={styles.selectedMethodSubtitle}>Processing Razorpay payment...</Text>
+              <Ionicons name="checkmark-circle" size={20} color="#4CAF50" style={{ marginLeft: 10 }} />
             </View>
           ) : (
-            <View style={styles.selectedPaymentMethod}>
+            <View style={[styles.paymentOption, styles.paymentOptionSelected]}>
               <Ionicons name="cash-outline" size={32} color="#FF9100" />
               <Text style={styles.selectedMethodTitle}>Cash on Delivery</Text>
-              <Text style={styles.selectedMethodSubtitle}>Confirming your order...</Text>
+              <Ionicons name="checkmark-circle" size={20} color="#4CAF50" style={{ marginLeft: 10 }} />
             </View>
           )}
+
+          <Text style={styles.paymentConfirmationText}>
+            {paymentMethod === "razorpay"
+              ? "You've selected online payment. Proceed to pay securely."
+              : "You'll pay when your order is delivered."}
+          </Text>
         </View>
 
-        <View style={styles.securityInfo}>
-          <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
-          <Text style={styles.securityText}>Your payment is secure and encrypted</Text>
-        </View>
+        {showPayButton && (
+          <TouchableOpacity style={styles.payButton} onPress={handlePay}>
+            <Ionicons name="wallet" size={20} color="#fff" />
+            <Text style={styles.payButtonText}>
+              {paymentMethod === "razorpay" ? "Pay Now" : "Confirm Order"}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {paymentMethod === "razorpay" && (
+          <View style={styles.securityInfo}>
+            <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
+            <Text style={styles.securityText}>
+              Your payment is secure and encrypted
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -249,6 +413,47 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 16,
   },
+  paymentOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1a1a1a",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: "#333",
+  },
+  paymentOptionSelected: {
+    borderColor: "#FF9100",
+  },
+  selectedMethodTitle: {
+    color: "#FF9100",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginLeft: 16,
+  },
+  paymentConfirmationText: {
+    color: "#999",
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  payButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FF9100",
+    borderRadius: 12,
+    padding: 18,
+    justifyContent: "center",
+    marginBottom: 24,
+    marginTop: 6,
+  },
+  payButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginLeft: 10,
+  },
   securityInfo: {
     flexDirection: "row",
     alignItems: "center",
@@ -261,25 +466,5 @@ const styles = StyleSheet.create({
     color: "#4CAF50",
     fontSize: 14,
     marginLeft: 8,
-  },
-  selectedPaymentMethod: {
-    backgroundColor: "#1a1a1a",
-    borderRadius: 12,
-    padding: 24,
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#FF9100",
-  },
-  selectedMethodTitle: {
-    color: "#FF9100",
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 12,
-  },
-  selectedMethodSubtitle: {
-    color: "#999",
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 4,
   },
 });
