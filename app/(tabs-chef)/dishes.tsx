@@ -141,9 +141,6 @@ export default function DishesScreen() {
                     {showMenuId === item.id && (
                       <View style={styles.floatingMenu}>
                         <TouchableOpacity style={styles.menuItem}>
-                          <Text style={styles.menuText}>Edit</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.menuItem}>
                           <Text style={styles.menuText}>Show/Hide</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
