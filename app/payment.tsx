@@ -1,7 +1,6 @@
 import { supabase } from "@/constants/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -47,7 +46,7 @@ export default function PaymentScreen() {
       .from("Orders")
       .insert({
         user_id: userId,
-        rider_id: null,
+        rider_id: "3b2d5a1e-8f14-4a5b-ae99-000000000012",
         items,
         order_time: new Date().toISOString(),
         delivery_lat: lat,
@@ -66,7 +65,7 @@ export default function PaymentScreen() {
       .select("order_id");
 
     if (error) {
-      console.error("❌ Supabase insert error:", error.message);
+      console.error("❌ Supabase insert to orders error:", error.message);
       return null;
     }
 
@@ -135,128 +134,245 @@ export default function PaymentScreen() {
   };
 
   // Only run all logic when pay button is pressed
+  // const handlePay = async () => {
+  //   setIsProcessing(true);
+
+  //   setTimeout(
+  //     async () => {
+  //       const {
+  //         data: { user },
+  //       } = await supabase.auth.getUser();
+  //       const userId = user?.id;
+
+  //       // Dish order logic
+  //       const cart = await AsyncStorage.getItem("cartItems");
+  //       const items = cart ? JSON.parse(cart) : [];
+
+  //       const dishesOnly = items.filter((item: any) =>
+  //         item.id?.startsWith("D")
+  //       );
+
+  //       // Get location (for both orders and chef hire, if needed)
+  //       let lat = "28.807668",
+  //         lng = "77.787397";
+
+  //       // Place dish order if cart has dishes
+  //       if (dishesOnly.length > 0) {
+  //         const subtotal = amount;
+  //         const gst = Math.round(subtotal * 0.05);
+  //         const deliveryFee = 30;
+
+  //         const orderId = await insertOrderToSupabase({
+  //           userId,
+  //           items: dishesOnly,
+  //           address,
+  //           lat,
+  //           lng,
+  //           subtotal,
+  //           gst,
+  //           deliveryFee,
+  //           paymentMethod: selectedMethod,
+  //           phone,
+  //         });
+
+  //         if (!orderId) {
+  //           Alert.alert("Error", "Order failed. Please try again.");
+  //           setIsProcessing(false);
+  //           return;
+  //         }
+
+  //         await AsyncStorage.setItem("orderId", orderId); // store UUID
+  //         await AsyncStorage.setItem(
+  //           "orderDetails",
+  //           JSON.stringify({
+  //             amount: subtotal,
+  //             address,
+  //             phone,
+  //             instructions,
+  //             paymentMethod: selectedMethod,
+  //             orderId,
+  //           })
+  //         );
+  //       }
+
+  //       // Chef hire logic
+  //       const pendingHire = await AsyncStorage.getItem("pendingHire");
+  //       if (pendingHire) {
+  //         const hire = JSON.parse(pendingHire);
+
+  //         // Compose payload for hire_chef
+  //         const hirePayload = {
+  //           userId,
+  //           chefId: hire.chefId,
+  //           scheduledDate: hire.scheduledDate.split("T")[0], // ISO to yyyy-mm-dd
+  //           startTime: hire.startTime,
+  //           endTime: null,
+  //           hours: hire.hours,
+  //           note: hire.note,
+  //           address,
+  //           lat,
+  //           lng,
+  //           amount,
+  //           tax: Math.round(amount * 0.05),
+  //           paymentStatus: "paid",
+  //           paymentMethod: selectedMethod,
+  //           paymentTime: new Date().toISOString(),
+  //           phone,
+  //         };
+
+  //         const hireChefId = await insertHireChefToSupabase(hirePayload);
+
+  //         if (!hireChefId) {
+  //           Alert.alert("Error", "Chef hiring failed. Please try again.");
+  //           setIsProcessing(false);
+  //           return;
+  //         }
+
+  //         await AsyncStorage.setItem("hireChefId", hireChefId);
+  //         await AsyncStorage.removeItem("pendingHire"); // clear after success
+  //       }
+
+  //       setIsProcessing(false);
+  //       Alert.alert(
+  //         selectedMethod === "razorpay"
+  //           ? "Payment Successful!"
+  //           : "Order Placed!",
+  //         selectedMethod === "razorpay"
+  //           ? "Your payment has been processed successfully."
+  //           : "Your order has been placed successfully. Pay when delivered.",
+  //         [
+  //           {
+  //             text: "Track Order",
+  //             onPress: () => router.push("/checkout/order_placed"),
+  //           },
+  //         ]
+  //       );
+  //     },
+  //     selectedMethod === "razorpay" ? 2000 : 1500
+  //   );
+  // };
+
+
   const handlePay = async () => {
-    setIsProcessing(true);
+  setIsProcessing(true);
 
-    setTimeout(
-      async () => {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        const userId = user?.id;
+  setTimeout(
+    async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const userId = user?.id;
 
-        // Dish order logic
-        const cart = await AsyncStorage.getItem("cartItems");
-        const items = cart ? JSON.parse(cart) : [];
+      let orderDetails = null;
+      let hireDetails = null;
 
-        const dishesOnly = items.filter((item: any) =>
-          item.id?.startsWith("D")
-        );
+      // Dish order logic
+      const cart = await AsyncStorage.getItem("cartItems");
+      const items = cart ? JSON.parse(cart) : [];
+      const dishesOnly = items.filter((item: any) => item.id?.startsWith("D"));
 
-        // Get location (for both orders and chef hire, if needed)
-        let lat = null,
-          lng = null;
-        try {
-          const { coords } = await Location.getCurrentPositionAsync({});
-          lat = coords.latitude;
-          lng = coords.longitude;
-        } catch (e) {
-          // fallback or warn
+      if (dishesOnly.length > 0) {
+        const subtotal = amount;
+        const gst = Math.round(subtotal * 0.05);
+        const deliveryFee = 30;
+
+        const orderId = await insertOrderToSupabase({
+          userId,
+          items: dishesOnly,
+          address,
+          lat: "28.807668",
+          lng: "77.787397",
+          subtotal,
+          gst,
+          deliveryFee,
+          paymentMethod: selectedMethod,
+          phone,
+        });
+
+        if (!orderId) {
+          Alert.alert("Error", "Order failed. Please try again.");
+          setIsProcessing(false);
+          return;
         }
 
-        // Place dish order if cart has dishes
-        if (dishesOnly.length > 0) {
-          const subtotal = amount;
-          const gst = Math.round(subtotal * 0.05);
-          const deliveryFee = 30;
+        orderDetails = {
+          type: "dish",
+          orderId,
+          amount: subtotal,
+          address,
+          phone,
+          instructions,
+          paymentMethod: selectedMethod,
+          items: dishesOnly,
+        };
 
-          const orderId = await insertOrderToSupabase({
-            userId,
-            items: dishesOnly,
-            address,
-            lat,
-            lng,
-            subtotal,
-            gst,
-            deliveryFee,
-            paymentMethod: selectedMethod,
-            phone,
-          });
+        await AsyncStorage.setItem("orderDetails", JSON.stringify(orderDetails));
+      }
 
-          if (!orderId) {
-            Alert.alert("Error", "Order failed. Please try again.");
-            setIsProcessing(false);
-            return;
-          }
+      // Chef hire logic
+      const pendingHire = await AsyncStorage.getItem("pendingHire");
+      if (pendingHire) {
+        const hire = JSON.parse(pendingHire);
 
-          await AsyncStorage.setItem("orderId", orderId); // store UUID
-          await AsyncStorage.setItem(
-            "orderDetails",
-            JSON.stringify({
-              amount: subtotal,
-              address,
-              phone,
-              instructions,
-              paymentMethod: selectedMethod,
-              orderId,
-            })
-          );
+        const hirePayload = {
+          userId,
+          chefId: hire.chefId,
+          scheduledDate: hire.scheduledDate.split("T")[0],
+          startTime: hire.startTime,
+          hours: hire.hours,
+          note: hire.note,
+          address,
+          lat: "28.807668",
+          lng: "77.787397",
+          amount,
+          tax: Math.round(amount * 0.05),
+          paymentStatus: "paid",
+          paymentMethod: selectedMethod,
+          paymentTime: new Date().toISOString(),
+          phone,
+        };
+
+        const hireChefId = await insertHireChefToSupabase(hirePayload);
+
+        if (!hireChefId) {
+          Alert.alert("Error", "Chef hiring failed. Please try again.");
+          setIsProcessing(false);
+          return;
         }
 
-        // Chef hire logic
-        const pendingHire = await AsyncStorage.getItem("pendingHire");
-        if (pendingHire) {
-          const hire = JSON.parse(pendingHire);
+        hireDetails = {
+          type: "chef",
+          hireId: hireChefId,
+          chefId: hire.chefId,
+          scheduledDate: hire.scheduledDate,
+          startTime: hire.startTime,
+          hours: hire.hours,
+          note: hire.note,
+          amount,
+          address,
+          phone,
+          paymentMethod: selectedMethod,
+        };
 
-          // Compose payload for hire_chef
-          const hirePayload = {
-            userId,
-            chefId: hire.chefId,
-            scheduledDate: hire.scheduledDate.split("T")[0], // ISO to yyyy-mm-dd
-            startTime: hire.startTime,
-            endTime: null,
-            hours: hire.hours,
-            note: hire.note,
-            address,
-            lat,
-            lng,
-            amount,
-            tax: Math.round(amount * 0.05),
-            paymentStatus: "paid",
-            paymentMethod: selectedMethod,
-            paymentTime: new Date().toISOString(),
-            phone,
-          };
+        await AsyncStorage.setItem("hireDetails", JSON.stringify(hireDetails));
+        await AsyncStorage.removeItem("pendingHire");
+      }
 
-          const hireChefId = await insertHireChefToSupabase(hirePayload);
-
-          if (!hireChefId) {
-            Alert.alert("Error", "Chef hiring failed. Please try again.");
-            setIsProcessing(false);
-            return;
-          }
-
-          await AsyncStorage.setItem("hireChefId", hireChefId);
-          await AsyncStorage.removeItem("pendingHire"); // clear after success
-        }
-
-        setIsProcessing(false);
-        Alert.alert(
-          selectedMethod === "razorpay" ? "Payment Successful!" : "Order Placed!",
-          selectedMethod === "razorpay"
-            ? "Your payment has been processed successfully."
-            : "Your order has been placed successfully. Pay when delivered.",
-          [
-            {
-              text: "Track Order",
-              onPress: () => router.push("/checkout/order_placed"),
-            },
-          ]
-        );
-      },
-      selectedMethod === "razorpay" ? 2000 : 1500
-    );
-  };
+      setIsProcessing(false);
+      
+      // Navigate to order_placed with the appropriate details
+      router.push({
+        pathname: "/checkout/order_placed",
+        params: {
+          orderType: dishesOnly.length > 0 ? "dish" : "chef",
+          ...(dishesOnly.length > 0 ? { orderDetails: JSON.stringify(orderDetails) } : {}),
+          ...(pendingHire ? { hireDetails: JSON.stringify(hireDetails) } : {}),
+        },
+      });
+    },
+    selectedMethod === "razorpay" ? 2000 : 1500
+  );
+};
 
   // Show pay button immediately since method is already selected
   useEffect(() => {
@@ -298,19 +414,29 @@ export default function PaymentScreen() {
 
         <View style={styles.paymentMethods}>
           <Text style={styles.sectionTitle}>Payment Method</Text>
-          
+
           {/* Only show the selected payment method */}
           {paymentMethod === "razorpay" ? (
             <View style={[styles.paymentOption, styles.paymentOptionSelected]}>
               <Ionicons name="card-outline" size={32} color="#FF9100" />
               <Text style={styles.selectedMethodTitle}>Online Payment</Text>
-              <Ionicons name="checkmark-circle" size={20} color="#4CAF50" style={{ marginLeft: 10 }} />
+              <Ionicons
+                name="checkmark-circle"
+                size={20}
+                color="#4CAF50"
+                style={{ marginLeft: 10 }}
+              />
             </View>
           ) : (
             <View style={[styles.paymentOption, styles.paymentOptionSelected]}>
               <Ionicons name="cash-outline" size={32} color="#FF9100" />
               <Text style={styles.selectedMethodTitle}>Cash on Delivery</Text>
-              <Ionicons name="checkmark-circle" size={20} color="#4CAF50" style={{ marginLeft: 10 }} />
+              <Ionicons
+                name="checkmark-circle"
+                size={20}
+                color="#4CAF50"
+                style={{ marginLeft: 10 }}
+              />
             </View>
           )}
 

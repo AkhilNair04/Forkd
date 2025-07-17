@@ -13,7 +13,7 @@ import { supabase } from "@/constants/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const DELIVERY_STAGES = [
+const DISH_DELIVERY_STAGES = [
   "Looking for a delivery partner",
   "Rider on their way to pick up order",
   "Rider has reached pickup location",
@@ -21,6 +21,34 @@ const DELIVERY_STAGES = [
   "Rider is on the way to deliver your order",
   "Rider has successfully delivered your order",
 ];
+
+const CHEF_HIRE_STAGES = [
+  "Requested",
+  "Chef Confirmed",
+  "Preparing Ingredients",
+  "On the Way",
+  "Cooking in Progress",
+  "Service Completed",
+];
+
+type OrderItem = {
+  id: string;
+  name: string;
+  price: number;
+  quantity?: number;
+};
+
+type ChefDetails = {
+  chefId: string;
+  chefName?: string;
+  chefImage?: string;
+  scheduledDate?: string;
+  startTime?: string;
+  endTime?: string;
+  status?: string;
+  note?: string;
+  chefPhone?: string;
+};
 
 type OrderDetails = {
   orderId: string;
@@ -31,17 +59,9 @@ type OrderDetails = {
   instructions?: string;
   delivery_notes?: string;
   isChefHire?: boolean;
+  items?: OrderItem[];
   note?: string;
-  chefDetails?: {
-    chefId: string;
-    chefName?: string;
-    scheduledDate?: string;
-    startTime?: string;
-    endTime?: string;
-    status?: string;
-    note?: string;
-    chefPhone?: string;
-  };
+  chefDetails?: ChefDetails;
 };
 
 export default function OrderPlacedScreen() {
@@ -55,86 +75,89 @@ export default function OrderPlacedScreen() {
     const fetchOrderDetails = async () => {
       try {
         const rawOrderData = await AsyncStorage.getItem("orderDetails");
-        const rawHireData = await AsyncStorage.getItem("hireChefId");
+        const rawHireData = await AsyncStorage.getItem("hireDetails");
         let details: OrderDetails | null = null;
 
-        // If this is a chef hire, fetch from hire_chef
+        // If this is a chef hire
         if (hireChefId || rawHireData) {
-          const chefHireId = (hireChefId as string) || rawHireData;
-          // Fetch from Supabase
+          const hireData = rawHireData ? JSON.parse(rawHireData) : null;
+          const hireId = (hireChefId as string) || hireData?.hireId;
+
           const { data, error } = await supabase
             .from("hire_chef")
-            .select(
-              "id, amount, payment_method, address, phone, note, status, chef_id, scheduled_date, start_time, end_time,user_rating"
-            )
-            .eq("id", chefHireId)
+            .select("*")
+            .eq("id", hireId)
             .single();
 
           if (error || !data) {
-            console.error(
-              "❌ Supabase fetch error (hire_chef):",
-              error?.message
-            );
+            console.error("Error fetching chef hire:", error?.message);
             throw new Error("Chef hire details not found");
           }
 
-          // Fetch chef name if you want (optional)
-          let chefName = undefined;
-          let chefPhone = undefined;
-          try {
-            const { data: chefData } = await supabase
-              .from("Chef")
-              .select("name, phone")
-              .eq("id", data.chef_id)
-              .single();
-            chefName = chefData?.name;
-            chefPhone = chefData?.phone;
-          } catch (e) {}
+          // Fetch chef details
+          const { data: chefData } = await supabase
+            .from("Chef")
+            .select("*")
+            .eq("chef_id", data.chef_id)
+            .single();
 
           details = {
             orderId: data.id,
-            amount: parseFloat(data.amount),
+            amount: data.amount,
             paymentMethod: data.payment_method,
             address: data.address,
-            phone: data.phone ?? "N/A",
+            phone: data.phone,
             note: data.note,
             delivery_notes: data.status,
             isChefHire: true,
             chefDetails: {
               chefId: data.chef_id,
-              chefName,
-              chefPhone,
+              chefName: chefData?.name,
+              chefImage: chefData?.profile_image,
               scheduledDate: data.scheduled_date,
               startTime: data.start_time,
               endTime: data.end_time,
               status: data.status,
               note: data.note,
+              chefPhone: chefData?.phone,
             },
           };
-        } else if (rawOrderData) {
-          // Normal dish order
-          const { orderId } = JSON.parse(rawOrderData);
+        }
+        // If this is a dish order
+        else if (orderId || rawOrderData) {
+          const orderData = rawOrderData ? JSON.parse(rawOrderData) : null;
+          const id = (orderId as string) || orderData?.orderId;
+
           const { data, error } = await supabase
             .from("Orders")
-            .select(
-              "order_id, total_amount, payment_method, delivery_address, delivery_notes, tax_amount, phone, items"
-            )
-            .eq("order_id", orderId)
+            .select("*")
+            .eq("order_id", id)
             .single();
 
           if (error || !data) {
-            console.error("❌ Supabase fetch error (Orders):", error?.message);
+            console.error("Error fetching order:", error?.message);
             throw new Error("Order details not found");
+          }
+
+          // Ensure items is always an array
+          let items: OrderItem[] = [];
+          if (data.items && Array.isArray(data.items)) {
+            items = data.items;
+          } else if (data.items) {
+            // Handle case where items might be stored as object
+            items = Object.values(data.items);
           }
 
           details = {
             orderId: data.order_id,
-            amount: parseFloat(data.total_amount),
+            amount: data.total_amount,
             paymentMethod: data.payment_method,
             address: data.delivery_address,
-            delivery_notes: data.delivery_notes,
-            phone: data.phone ?? "N/A",
+            phone: data.phone,
+            instructions: data.instructions,
+            delivery_notes: data.status,
             isChefHire: false,
+            items: items,
           };
         }
 
@@ -149,9 +172,14 @@ export default function OrderPlacedScreen() {
     fetchOrderDetails();
   }, []);
 
-  const getCurrentStage = () => {
-    const index = DELIVERY_STAGES.indexOf(orderDetails?.delivery_notes ?? "");
-    return index >= 0 ? index : 0;
+  const getCurrentStageIndex = () => {
+    if (!orderDetails) return 0;
+
+    const stages = orderDetails.isChefHire
+      ? CHEF_HIRE_STAGES
+      : DISH_DELIVERY_STAGES;
+
+    return stages.indexOf(orderDetails.delivery_notes || stages[0]);
   };
 
   if (loading) {
@@ -180,6 +208,11 @@ export default function OrderPlacedScreen() {
     );
   }
 
+  const currentStageIndex = getCurrentStageIndex();
+  const stages = orderDetails.isChefHire
+    ? CHEF_HIRE_STAGES
+    : DISH_DELIVERY_STAGES;
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -193,16 +226,16 @@ export default function OrderPlacedScreen() {
           </View>
           <Text style={styles.successTitle}>
             {orderDetails.isChefHire
-              ? "Chef Hire Request Placed!"
+              ? "Chef Hired Successfully!"
               : "Order Placed Successfully!"}
           </Text>
           <Text style={styles.successSubtitle}>
             {orderDetails.isChefHire
-              ? "Your chef will reach out for confirmation soon"
-              : "Your delicious food will be delivered shortly"}
+              ? "Your chef will contact you soon"
+              : "Your food will be delivered shortly"}
           </Text>
           <Text style={styles.orderId}>
-            {orderDetails.isChefHire ? "Hire ID" : "Order ID"}:{" "}
+            {orderDetails.isChefHire ? "Booking ID" : "Order ID"}:{" "}
             {orderDetails.orderId}
           </Text>
         </View>
@@ -210,77 +243,80 @@ export default function OrderPlacedScreen() {
         {/* Status Section */}
         <View style={styles.statusSection}>
           <Text style={styles.sectionTitle}>
-            {orderDetails.isChefHire ? "Hire Status" : "Order Status"}
+            {orderDetails.isChefHire ? "Booking Status" : "Order Status"}
           </Text>
           <View style={styles.statusContainer}>
-            {orderDetails.isChefHire ? (
-              <View style={styles.statusStep}>
-                <View
-                  style={[
-                    styles.statusIconContainer,
-                    { backgroundColor: "#4CAF50" },
-                  ]}
-                >
-                  <Ionicons name="person-outline" size={24} color="#4CAF50" />
-                </View>
-                <View style={styles.statusContent}>
-                  <Text style={[styles.statusTitle, { color: "#4CAF50" }]}>
-                    {orderDetails.chefDetails?.status || "Requested"}
-                  </Text>
-                </View>
-              </View>
-            ) : (
-              DELIVERY_STAGES.map((stage, index) => {
-                const current = getCurrentStage();
-                const isComplete = index <= current;
-                const color = isComplete ? "#4CAF50" : "#666";
-                const iconBg = isComplete ? "#4CAF50" : "#333";
+            {stages.map((stage, index) => {
+              const isComplete = index <= currentStageIndex;
+              const color = isComplete ? "#4CAF50" : "#666";
+              const iconBg = isComplete ? "#4CAF50" : "#333";
 
-                const iconMap: { [key: number]: any } = {
-                  0: "search",
-                  1: "walk",
-                  2: "navigate",
-                  3: "checkmark-done",
-                  4: "bicycle",
-                  5: "home",
-                };
+              const iconMap = orderDetails.isChefHire
+                ? [
+                    "person-outline",
+                    "checkmark-done",
+                    "restaurant-outline",
+                    "walk",
+                    "time-outline",
+                    "checkmark-done",
+                  ]
+                : [
+                    "search",
+                    "walk",
+                    "navigate",
+                    "checkmark-done",
+                    "bicycle",
+                    "home",
+                  ];
 
-                return (
-                  <View style={styles.statusStep} key={index}>
-                    <View
-                      style={[
-                        styles.statusIconContainer,
-                        { backgroundColor: iconBg },
-                      ]}
-                    >
-                      <Ionicons
-                        name={iconMap[index] || "checkmark-circle"}
-                        size={24}
-                        color={color}
-                      />
-                    </View>
-                    <View style={styles.statusContent}>
-                      <Text style={[styles.statusTitle, { color }]}>
-                        {stage}
-                      </Text>
-                    </View>
+              return (
+                <View style={styles.statusStep} key={index}>
+                  <View
+                    style={[
+                      styles.statusIconContainer,
+                      { backgroundColor: iconBg },
+                    ]}
+                  >
+                    <Ionicons
+                      name={"checkmark-circle"}
+                      size={24}
+                      color={color}
+                    />
                   </View>
-                );
-              })
-            )}
+                  <View style={styles.statusContent}>
+                    <Text style={[styles.statusTitle, { color }]}>{stage}</Text>
+                  </View>
+                </View>
+              );
+            })}
           </View>
         </View>
 
-        {/* Order/Chef Hire Details Section */}
+        {/* Details Section */}
         <View style={styles.orderDetailsSection}>
           <Text style={styles.sectionTitle}>
-            {orderDetails.isChefHire ? "Hire Details" : "Order Details"}
+            {orderDetails.isChefHire ? "Booking Details" : "Order Details"}
           </Text>
           <View style={styles.detailsContainer}>
+            {orderDetails.isChefHire && orderDetails.chefDetails && (
+              <View style={styles.chefInfoContainer}>
+                <View style={styles.chefText}>
+                  <Text style={styles.chefName}>
+                    {orderDetails.chefDetails.chefName || "Professional Chef"}
+                  </Text>
+                  <Text style={styles.chefContact}>
+                    {orderDetails.chefDetails.chefPhone ||
+                      "Contact chef for details"}
+                  </Text>
+                </View>
+              </View>
+            )}
+
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Amount Paid</Text>
               <Text style={styles.detailValue}>₹{orderDetails.amount}</Text>
             </View>
+
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Payment Method</Text>
               <Text style={styles.detailValue}>
@@ -289,124 +325,30 @@ export default function OrderPlacedScreen() {
                   : "Cash on Delivery"}
               </Text>
             </View>
+
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>
                 {orderDetails.isChefHire
                   ? "Service Address"
                   : "Delivery Address"}
               </Text>
-              <Text
-                style={[styles.detailValue, { flex: 1, textAlign: "right" }]}
-              >
-                {orderDetails.address}
-              </Text>
+              <Text style={styles.detailValue}>{orderDetails.address}</Text>
             </View>
+
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Phone</Text>
+              <Text style={styles.detailLabel}>Contact Phone</Text>
               <Text style={styles.detailValue}>{orderDetails.phone}</Text>
             </View>
-            {orderDetails.isChefHire && orderDetails.chefDetails && (
-              <>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Chef</Text>
-                  <Text style={styles.detailValue}>
-                    {orderDetails.chefDetails.chefName ||
-                      orderDetails.chefDetails.chefId}
-                  </Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Scheduled Date</Text>
-                  <Text style={styles.detailValue}>
-                    {orderDetails.chefDetails.scheduledDate}
-                  </Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Start Time</Text>
-                  <Text style={styles.detailValue}>
-                    {orderDetails.chefDetails.startTime}
-                  </Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>End Time</Text>
-                  <Text style={styles.detailValue}>
-                    {orderDetails.chefDetails.endTime}
-                  </Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Instructions</Text>
-                  <Text style={styles.detailValue}>
-                    {orderDetails.chefDetails.note}
-                  </Text>
-                </View>
-              </>
-            )}
           </View>
         </View>
 
-        {/* Next Steps */}
-        <View style={styles.nextStepsSection}>
-          <Text style={styles.sectionTitle}>What&apos;s Next?</Text>
-          <View style={styles.nextStepsContainer}>
-            {orderDetails.isChefHire ? (
-              <>
-                <View style={styles.nextStep}>
-                  <Ionicons name="person-outline" size={24} color="#FF9100" />
-                  <Text style={styles.nextStepText}>
-                    Your chef will contact you for confirmation
-                  </Text>
-                </View>
-                <View style={styles.nextStep}>
-                  <Ionicons name="call-outline" size={24} color="#FF9100" />
-                  <Text style={styles.nextStepText}>
-                    Coordinate timing and any special requests
-                  </Text>
-                </View>
-                <View style={styles.nextStep}>
-                  <Ionicons name="star-outline" size={24} color="#FF9100" />
-                  <Text style={styles.nextStepText}>
-                    Leave a review after service!
-                  </Text>
-                </View>
-              </>
-            ) : (
-              <>
-                <View style={styles.nextStep}>
-                  <Ionicons name="time-outline" size={24} color="#FF9100" />
-                  <Text style={styles.nextStepText}>
-                    Your food will be ready in 15-20 minutes
-                  </Text>
-                </View>
-                <View style={styles.nextStep}>
-                  <Ionicons name="call-outline" size={24} color="#FF9100" />
-                  <Text style={styles.nextStepText}>
-                    We&apos;ll call you once the delivery partner is assigned
-                  </Text>
-                </View>
-                <View style={styles.nextStep}>
-                  <Ionicons name="star-outline" size={24} color="#FF9100" />
-                  <Text style={styles.nextStepText}>
-                    Rate your experience after delivery
-                  </Text>
-                </View>
-              </>
-            )}
-          </View>
-        </View>
-
+        {/* Action Buttons */}
         <View style={styles.actionButtons}>
           <TouchableOpacity
-            style={styles.exploreButton}
-            onPress={() => router.push("/(tabs)/dish")}
+            style={styles.homeButton}
+            onPress={() => router.push("/(tabs)/chef")}
           >
-            <Ionicons name="restaurant-outline" size={20} color="#FF9100" />
-            <Text style={styles.exploreButtonText}>Explore More Dishes</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.chefsButton}
-            onPress={() => router.push("/")}
-          >
-            <Ionicons name="people-outline" size={20} color="#fff" />
-            <Text style={styles.chefsButtonText}>Discover Chefs</Text>
+            <Text style={styles.homeButtonText}>Back to Home</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -481,6 +423,33 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
   },
+  chefInfoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#333",
+  },
+  chefImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 16,
+  },
+  chefText: {
+    flex: 1,
+  },
+  chefName: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  chefContact: {
+    color: "#FF9100",
+    fontSize: 14,
+  },
   detailRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -491,52 +460,60 @@ const styles = StyleSheet.create({
   },
   detailLabel: { color: "#999", fontSize: 14 },
   detailValue: { color: "#fff", fontSize: 14, fontWeight: "600" },
-  nextStepsSection: { marginBottom: 32 },
-  nextStepsContainer: {
-    backgroundColor: "#1a1a1a",
+  itemsSection: {
+    marginTop: 16,
+  },
+  itemsTitle: {
+    color: "#FF9100",
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  itemRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  itemName: {
+    color: "#fff",
+    fontSize: 14,
+  },
+  itemPrice: {
+    color: "#FF9100",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  noItemsText: {
+    color: "#999",
+    fontSize: 14,
+    fontStyle: "italic",
+  },
+  actionButtons: {
+    marginBottom: 40,
+  },
+  trackButton: {
+    backgroundColor: "#FF9100",
     borderRadius: 12,
     padding: 16,
-  },
-  nextStep: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
-  nextStepText: { color: "#fff", fontSize: 14, marginLeft: 12, flex: 1 },
-  actionButtons: { marginBottom: 40 },
-  exploreButton: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    marginBottom: 12,
+  },
+  trackButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  homeButton: {
     backgroundColor: "#1a1a1a",
     borderWidth: 1,
     borderColor: "#FF9100",
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
+    alignItems: "center",
   },
-  exploreButtonText: {
+  homeButtonText: {
     color: "#FF9100",
     fontSize: 16,
     fontWeight: "600",
-    marginLeft: 8,
   },
-  chefsButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FF9100",
-    borderRadius: 12,
-    padding: 16,
-  },
-  chefsButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-  homeButton: {
-    backgroundColor: "#FF9100",
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 25,
-    marginTop: 20,
-  },
-  homeButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

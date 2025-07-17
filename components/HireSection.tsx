@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -14,23 +14,38 @@ interface HireSectionProps {
 }
 
 export default function HireSection({ note, setNote, onHire }: HireSectionProps) {
+  const [localNote, setLocalNote] = useState(note);
+
+  // Sync the localNote with the parent's note if it changes externally
+  useEffect(() => {
+    setLocalNote(note);
+  }, [note]);
+
+  const handleHirePress = () => {
+    setNote(localNote); // Update parent state only when hiring
+    onHire();
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>NOTES :</Text>
       <TextInput
-        value={note}
-        onChangeText={setNote}
+        value={localNote}
+        onChangeText={setLocalNote}
         placeholder="Add any special instructions for the chef..."
         placeholderTextColor="#999"
         style={styles.noteInput}
+        multiline
       />
 
-      <TouchableOpacity style={styles.hireButton} onPress={onHire}>
+      <TouchableOpacity style={styles.hireButton} onPress={handleHirePress}>
         <Text style={styles.hireButtonText}>Hire Chef</Text>
       </TouchableOpacity>
     </View>
   );
 }
+
+// Styles remain the same...
 
 const styles = StyleSheet.create({
   container: {

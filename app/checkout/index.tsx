@@ -4,6 +4,7 @@ import { useCart } from "../../context/CartContext"; // <-- Add extension!
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Define CartItem type (adjust fields as per your actual CartContext)
 type CartItem = {
@@ -43,7 +44,7 @@ export default function Checkout() {
     return true;
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!validateForm()) {
       return;
     }
@@ -51,6 +52,7 @@ export default function Checkout() {
     const amountInPaise = (total * 100).toString();
 
     try {
+      await AsyncStorage.setItem("cartItems", JSON.stringify(cart));
       router.push({
         pathname: "/payment",
         params: {
