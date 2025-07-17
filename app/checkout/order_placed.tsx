@@ -185,7 +185,7 @@ export default function OrderPlacedScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF9100" />
+        <ActivityIndicator size="large" color="#C67C4E" />
         <Text style={styles.loadingText}>Loading order details...</Text>
       </View>
     );
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 16,
   },
-  orderId: { color: "#FF9100", fontSize: 14, fontWeight: "600" },
+  orderId: { color: "#C67C4E", fontSize: 14, fontWeight: "600" },
   sectionTitle: {
     color: "#fff",
     fontSize: 18,
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   chefContact: {
-    color: "#FF9100",
+    color: "#C67C4E",
     fontSize: 14,
   },
   detailRow: {
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   itemsTitle: {
-    color: "#FF9100",
+    color: "#C67C4E",
     fontSize: 16,
     fontWeight: "bold",
     marginBottom: 12,
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   itemPrice: {
-    color: "#FF9100",
+    color: "#C67C4E",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   trackButton: {
-    backgroundColor: "#FF9100",
+    backgroundColor: "#C67C4E",
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
@@ -506,13 +506,13 @@ const styles = StyleSheet.create({
   homeButton: {
     backgroundColor: "#1a1a1a",
     borderWidth: 1,
-    borderColor: "#FF9100",
+    borderColor: "#C67C4E",
     borderRadius: 12,
     padding: 16,
     alignItems: "center",
   },
   homeButtonText: {
-    color: "#FF9100",
+    color: "#C67C4E",
     fontSize: 16,
     fontWeight: "600",
   },

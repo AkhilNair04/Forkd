@@ -152,7 +152,7 @@ export default function Checkout() {
             onPress={() => setPaymentMethod("razorpay")}
           >
             <View style={styles.paymentInfo}>
-              <Ionicons name="card-outline" size={24} color="#FF9100" />
+              <Ionicons name="card-outline" size={24} color="#C67C4E" />
               <View style={{ marginLeft: 12 }}>
                 <Text style={styles.paymentTitle}>Online Payment</Text>
                 <Text style={styles.paymentSubtitle}>Pay securely with Razorpay</Text>
@@ -166,7 +166,7 @@ export default function Checkout() {
             onPress={() => setPaymentMethod("cod")}
           >
             <View style={styles.paymentInfo}>
-              <Ionicons name="cash-outline" size={24} color="#FF9100" />
+              <Ionicons name="cash-outline" size={24} color="#C67C4E" />
               <View style={{ marginLeft: 12 }}>
                 <Text style={styles.paymentTitle}>Cash on Delivery</Text>
                 <Text style={styles.paymentSubtitle}>Pay when you receive</Text>
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     borderColor: "#333",
   },
   selectedPayment: {
-    borderColor: "#FF9100",
+    borderColor: "#C67C4E",
     backgroundColor: "#1a1a1a",
   },
   paymentInfo: {
@@ -333,8 +333,8 @@ const styles = StyleSheet.create({
     borderColor: "#666",
   },
   radioSelected: {
-    borderColor: "#FF9100",
-    backgroundColor: "#FF9100",
+    borderColor: "#C67C4E",
+    backgroundColor: "#C67C4E",
   },
   billContainer: {
     backgroundColor: "#1a1a1a",
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FF9100",
+    backgroundColor: "#C67C4E",
     marginHorizontal: 20,
     marginBottom: 40,
     padding: 16,

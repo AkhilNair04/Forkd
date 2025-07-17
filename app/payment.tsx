@@ -382,7 +382,7 @@ export default function PaymentScreen() {
   if (isProcessing) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF9100" />
+        <ActivityIndicator size="large" color="#C67C4E" />
         <Text style={styles.loadingText}>Processing your order...</Text>
       </View>
     );
@@ -400,7 +400,7 @@ export default function PaymentScreen() {
 
       <View style={styles.content}>
         <View style={styles.orderSummary}>
-          <Ionicons name="receipt-outline" size={48} color="#FF9100" />
+          <Ionicons name="receipt-outline" size={48} color="#C67C4E" />
           <Text style={styles.orderTitle}>Order Summary</Text>
           <Text style={styles.amountText}>₹{amount}</Text>
           <Text style={styles.orderDetails}>Delivery to: {address}</Text>
@@ -418,7 +418,7 @@ export default function PaymentScreen() {
           {/* Only show the selected payment method */}
           {paymentMethod === "razorpay" ? (
             <View style={[styles.paymentOption, styles.paymentOptionSelected]}>
-              <Ionicons name="card-outline" size={32} color="#FF9100" />
+              <Ionicons name="card-outline" size={32} color="#C67C4E" />
               <Text style={styles.selectedMethodTitle}>Online Payment</Text>
               <Ionicons
                 name="checkmark-circle"
@@ -429,7 +429,7 @@ export default function PaymentScreen() {
             </View>
           ) : (
             <View style={[styles.paymentOption, styles.paymentOptionSelected]}>
-              <Ionicons name="cash-outline" size={32} color="#FF9100" />
+              <Ionicons name="cash-outline" size={32} color="#C67C4E" />
               <Text style={styles.selectedMethodTitle}>Cash on Delivery</Text>
               <Ionicons
                 name="checkmark-circle"
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   amountText: {
-    color: "#FF9100",
+    color: "#C67C4E",
     fontSize: 32,
     fontWeight: "bold",
     marginVertical: 8,
@@ -550,10 +550,10 @@ const styles = StyleSheet.create({
     borderColor: "#333",
   },
   paymentOptionSelected: {
-    borderColor: "#FF9100",
+    borderColor: "#C67C4E",
   },
   selectedMethodTitle: {
-    color: "#FF9100",
+    color: "#C67C4E",
     fontSize: 18,
     fontWeight: "bold",
     marginLeft: 16,
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
   payButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FF9100",
+    backgroundColor: "#C67C4E",
     borderRadius: 12,
     padding: 18,
     justifyContent: "center",

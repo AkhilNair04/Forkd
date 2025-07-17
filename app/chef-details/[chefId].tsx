@@ -73,7 +73,7 @@ export default function ChefDetails() {
 
       // Validate inputs
       if (!chefId || !startTime || !hours || selectedDay === null) {
-        console.warn("Please fill all required fields");
+        alert("Please fill all required fields");
         return;
       }
 

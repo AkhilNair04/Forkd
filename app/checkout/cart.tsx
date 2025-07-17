@@ -274,7 +274,7 @@ export default function CartScreen() {
       {activeTab === "dishes" && dishCart.length > 0 && (
         <TouchableOpacity
           onPress={() => router.replace("/checkout")}
-          style={[styles.checkoutButton, { backgroundColor: "#FF9100" }]}
+          style={[styles.checkoutButton, { backgroundColor: "#C67C4E" }]}
         >
           <Text style={styles.checkoutButtonText}>
             Proceed to Checkout Dishes • ₹{dishFinalTotal}
@@ -286,7 +286,7 @@ export default function CartScreen() {
       {activeTab === "chefs" && chefCart.length > 0 && (
         <TouchableOpacity
           onPress={() => router.replace("/checkout")}
-          style={[styles.checkoutButton, { backgroundColor: "#FF9100" }]}
+          style={[styles.checkoutButton, { backgroundColor: "#C67C4E" }]}
         >
           <Text style={styles.checkoutButtonText}>
             Proceed to Checkout Chefs • ₹{chefFinalTotal}
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   headerTitle: { color: "#fff", fontSize: 20, fontWeight: "bold" },
-  clearAllText: { color: "#FF9100", fontSize: 14, fontWeight: "600" },
+  clearAllText: { color: "#C67C4E", fontSize: 14, fontWeight: "600" },
   tabContainer: {
     flexDirection: "row",
     marginHorizontal: 20,
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomWidth: 2,
-    borderBottomColor: "#FF9100",
+    borderBottomColor: "#C67C4E",
   },
   tabText: {
     color: "#fff",
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   itemDetails: { flex: 1, marginLeft: 12 },
   itemName: { color: "#fff", fontSize: 16, fontWeight: "600", marginBottom: 4 },
   itemMealType: { color: "#999", fontSize: 12, marginBottom: 2 },
-  chefName: { color: "#FF9100", fontSize: 12, marginBottom: 8 },
+  chefName: { color: "#C67C4E", fontSize: 12, marginBottom: 8 },
   itemBottom: {
     flexDirection: "row",
     alignItems: "center",
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   stepperButton: {
-    backgroundColor: "#FF9100",
+    backgroundColor: "#C67C4E",
     borderRadius: 6,
     width: 28,
     height: 28,
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
     marginTop: 30,
   },
   browseButton: {
-    backgroundColor: "#FF9100",
+    backgroundColor: "#C67C4E",
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 25,
