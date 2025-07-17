@@ -1,5 +1,5 @@
 // constants/fetchChefsForDish.ts
-import { supabase } from "@/lib/supabase";
+import { supabase } from "./supabase";
 
 export interface ChefForDish {
   id: string;

@@ -31,7 +31,7 @@ export async function fetchFavoriteDishes(userId: string) {
 
   // Step 3: Add imageUrl and parse tags
   const dishesWithImage = dishes.map((dish) => {
-    const imagePath = `${dish.id}/dish.jpg`;
+    const imagePath = `${dish.id}/dish_img.jpg`;
     const { data: publicUrlData } = supabase.storage
       .from("dish")
       .getPublicUrl(imagePath);

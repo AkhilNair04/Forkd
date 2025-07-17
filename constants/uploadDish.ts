@@ -1,4 +1,4 @@
-import { supabase } from "@/constants/supabase";
+import { supabase } from "./supabase";
 
 // Utility to generate next ID like D0001, CD0001
 async function getNextId(

@@ -1,6 +1,6 @@
 // constants/fetchDishes.ts
 
-import { supabase } from "@/lib/supabase";
+import { supabase } from "./supabase";
 
 export interface Dish {
   id: string;
@@ -12,19 +12,19 @@ export interface Dish {
   is_veg: boolean;
   cuisine: string;
   imageUrl: string;
-  rating:string,
-  reviews:string,
-  allergies:string[]
+  rating: string;
+  reviews: string;
+  allergies: string[];
 }
 
 export interface DishWithPrice extends Dish {
-  chefs: Array<{
+  chefs: {
     name: string;
     rating: number;
     reviews: number;
     price: number;
     avatar: string;
-  }>;
+  }[];
 }
 
 export async function fetchDishes(): Promise<Dish[]> {
@@ -40,7 +40,7 @@ export async function fetchDishes(): Promise<Dish[]> {
   }
 
   const dishesWithImages: Dish[] = data.map((dish) => {
-    const imagePath = `${dish.id}/dish.jpg`;
+    const imagePath = `${dish.id}/dish_img.jpg`;
     const { data: publicUrlData } = supabase.storage
       .from("dish")
       .getPublicUrl(imagePath);
@@ -53,9 +53,9 @@ export async function fetchDishes(): Promise<Dish[]> {
 
     return {
       ...dish,
-      rating:dish.rating_avg,
-      reviews:dish.reviews,
-      allergies:dish.contains,
+      rating: dish.rating_avg,
+      reviews: dish.reviews,
+      allergies: dish.contains,
       tags: parsedTags,
       imageUrl: publicUrlData?.publicUrl || "",
     };
@@ -78,9 +78,9 @@ export async function fetchDishesWithPrices(): Promise<DishWithPrice[]> {
   }
 
   // Get all dish-chef relationships with prices
-  const { data: dishChefData, error: dishChefError } = await supabase
-    .from("Dish_To_Chef")
-    .select(`
+  const { data: dishChefData, error: dishChefError } = await supabase.from(
+    "Dish_To_Chef"
+  ).select(`
       dish_id,
       dish_price,
       chef:chef_id (
@@ -92,18 +92,24 @@ export async function fetchDishesWithPrices(): Promise<DishWithPrice[]> {
     `);
 
   if (dishChefError) {
-    console.error("❌ Failed to fetch dish-chef relationships:", dishChefError?.message);
+    console.error(
+      "❌ Failed to fetch dish-chef relationships:",
+      dishChefError?.message
+    );
     return [];
   }
 
   // Create a map of dish_id to chefs with prices
-  const dishChefMap = new Map<string, Array<{
-    name: string;
-    rating: number;
-    reviews: number;
-    price: number;
-    avatar: string;
-  }>>();
+  const dishChefMap = new Map<
+    string,
+    {
+      name: string;
+      rating: number;
+      reviews: number;
+      price: number;
+      avatar: string;
+    }[]
+  >();
 
   // Process dish-chef relationships
   for (const item of dishChefData) {
@@ -112,7 +118,9 @@ export async function fetchDishesWithPrices(): Promise<DishWithPrice[]> {
 
     // Get chef avatar
     const imagePath = `${chef.id}/portrait.jpg`;
-    const { data: imageData } = supabase.storage.from("chef").getPublicUrl(imagePath);
+    const { data: imageData } = supabase.storage
+      .from("chef")
+      .getPublicUrl(imagePath);
 
     const chefData = {
       name: chef.name,
@@ -130,7 +138,7 @@ export async function fetchDishesWithPrices(): Promise<DishWithPrice[]> {
 
   // Combine dishes with their chef data
   const dishesWithPrices: DishWithPrice[] = dishes.map((dish) => {
-    const imagePath = `${dish.id}/dish.jpg`;
+    const imagePath = `${dish.id}/dish_img.jpg`;
     const { data: publicUrlData } = supabase.storage
       .from("dish")
       .getPublicUrl(imagePath);

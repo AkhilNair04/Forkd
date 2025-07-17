@@ -48,7 +48,7 @@ export async function fetchDishesByChef(uuid: string | null | undefined) {
         return null;
       }
 
-      const imagePath = `${dishData.id}/dish.jpg`;
+      const imagePath = `${dishData.id}/dish_img.jpg`;
       const { data: imageUrlData } = supabase.storage
         .from("dish")
         .getPublicUrl(imagePath);
