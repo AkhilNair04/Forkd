@@ -1,30 +1,47 @@
 // app/checkout/cart.tsx
-import React from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useState } from "react";
 import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
   FlatList,
-  StyleSheet,
+  Image,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useCart } from "../../context/CartContext";
-import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 
 export default function CartScreen() {
   const { cart, updateQuantity, removeFromCart } = useCart();
+  const [activeTab, setActiveTab] = useState<"dishes" | "chefs">("dishes");
 
   // Split carts by type
   const dishCart = cart.filter((item) => item.type === "dish");
   const chefCart = cart.filter((item) => item.type === "chef");
 
-  const total = dishCart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryFee = 40;
+  // Calculate totals for each type
+  const dishTotal = dishCart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+  const chefTotal = chefCart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+
+  // Delivery fee only applies to dishes
+  const deliveryFee = dishCart.length > 0 ? 40 : 0;
   const platformFee = 5;
-  const gst = Math.round((total + deliveryFee) * 0.05);
-  const finalTotal = total + deliveryFee + platformFee + gst;
+  const addFee = 100; // Additional fee for chefs
+
+  // GST applies to subtotal + delivery fee
+  const dishGst = Math.round((dishTotal + deliveryFee) * 0.05);
+  const chefGst = Math.round(chefTotal * 0.05);
+
+  const dishFinalTotal = dishTotal + deliveryFee + platformFee + dishGst;
+  const chefFinalTotal = chefTotal + platformFee + chefGst + addFee;
 
   const Stepper = ({ id, qty }: { id: string; qty: number }) => (
     <View style={styles.stepperContainer}>
@@ -50,9 +67,7 @@ export default function CartScreen() {
       <View style={styles.itemDetails}>
         <Text style={styles.itemName}>{item.name}</Text>
         <Text style={styles.itemMealType}>{item.meal_type}</Text>
-        {item.chef && (
-          <Text style={styles.chefName}>by {item.chef.name}</Text>
-        )}
+        {item.chef && <Text style={styles.chefName}>by {item.chef.name}</Text>}
         <View style={styles.itemBottom}>
           <Text style={styles.itemPrice}>₹{item.price}</Text>
           <Stepper id={item.id} qty={item.quantity} />
@@ -108,101 +123,178 @@ export default function CartScreen() {
           <Ionicons name="basket-outline" size={80} color="#666" />
           <Text style={styles.emptyCartText}>Your cart is empty</Text>
           <Text style={styles.emptyCartSubtext}>
-            Add some delicious dishes to get started
+            Add some delicious dishes or hire a chef to get started
           </Text>
-          <TouchableOpacity
-            style={styles.browseButton}
-            onPress={() => router.push("/(tabs)/dish")}
-          >
-            <Text style={styles.browseButtonText}>Browse Dishes</Text>
-          </TouchableOpacity>
+          <View style={styles.emptyCartButtons}>
+            <TouchableOpacity
+              style={[styles.browseButton, { marginRight: 10 }]}
+              onPress={() => router.push("/(tabs)/dish")}
+            >
+              <Text style={styles.browseButtonText}>Browse Dishes</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.browseButton}
+              onPress={() => router.push("/(tabs)/chef")}
+            >
+              <Text style={styles.browseButtonText}>Hire Chefs</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cart ({cart.length} items)</Text>
-        <TouchableOpacity onPress={() => cart.forEach((item) => removeFromCart(item.id))}>
+        <TouchableOpacity
+          onPress={() => cart.forEach((item) => removeFromCart(item.id))}
+        >
           <Text style={styles.clearAllText}>Clear All</Text>
         </TouchableOpacity>
       </View>
 
-      <>
-        <Text style={styles.sectionTitle}>Dishes</Text>
-        {dishCart.length === 0 ? (
-          <Text style={styles.emptySectionText}>No dishes added to cart</Text>
-        ) : (
-          <FlatList
-            data={dishCart}
-            keyExtractor={(i) => i.id}
-            renderItem={renderDishItem}
-            scrollEnabled={false}
-          />
-        )}
-      </>
-      <>
-        <Text style={styles.sectionTitle}>Chefs</Text>
-        {chefCart.length === 0 ? (
-          <Text style={styles.emptySectionText}>No chefs added to cart</Text>
-        ) : (
-          <FlatList
-            data={chefCart}
-            keyExtractor={(i) => i.id}
-            renderItem={renderChefItem}
-            scrollEnabled={false}
-          />
-        )}
-      </>
-
-
-      <View style={styles.billContainer}>
-        <Text style={styles.billTitle}>Bill Details</Text>
-
-        <View style={styles.billRow}>
-          <Text style={styles.billLabel}>Subtotal</Text>
-          <Text style={styles.billValue}>₹{total}</Text>
-        </View>
-
-        <View style={styles.billRow}>
-          <Text style={styles.billLabel}>Delivery Fee</Text>
-          <Text style={styles.billValue}>₹{deliveryFee}</Text>
-        </View>
-
-        <View style={styles.billRow}>
-          <Text style={styles.billLabel}>Platform Fee</Text>
-          <Text style={styles.billValue}>₹{platformFee}</Text>
-        </View>
-
-        <View style={styles.billRow}>
-          <Text style={styles.billLabel}>GST (5%)</Text>
-          <Text style={styles.billValue}>₹{gst}</Text>
-        </View>
-
-        <View style={styles.billDivider} />
-
-        <View style={styles.billRow}>
-          <Text style={styles.billTotal}>Total</Text>
-          <Text style={styles.billTotal}>₹{finalTotal}</Text>
-        </View>
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === "dishes" && styles.activeTab]}
+          onPress={() => setActiveTab("dishes")}
+        >
+          <Text style={styles.tabText}>Dishes ({dishCart.length})</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === "chefs" && styles.activeTab]}
+          onPress={() => setActiveTab("chefs")}
+        >
+          <Text style={styles.tabText}>Chefs ({chefCart.length})</Text>
+        </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        onPress={() => router.replace("/checkout")}
-        style={[styles.checkoutButton, { backgroundColor: cart.length ? "#FF9100" : "#555" }]}
-        disabled={cart.length === 0}
-      >
-        <Text style={styles.checkoutButtonText}>
-          Proceed to Checkout • ₹{finalTotal}
-        </Text>
-        <Ionicons name="arrow-forward" size={20} color="#fff" />
-      </TouchableOpacity>
-    </ScrollView>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Dishes Tab Content */}
+        {activeTab === "dishes" && (
+          <>
+            {dishCart.length === 0 ? (
+              <View style={styles.emptyTabContent}>
+                <Ionicons name="fast-food-outline" size={60} color="#666" />
+                <Text style={styles.emptyTabText}>No dishes in cart</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={dishCart}
+                keyExtractor={(i) => i.id}
+                renderItem={renderDishItem}
+                scrollEnabled={false}
+              />
+            )}
+
+            {/* Dishes Bill Section */}
+            {dishCart.length > 0 && (
+              <View style={styles.billContainer}>
+                <Text style={styles.billTitle}>Dishes Bill Details</Text>
+                <View style={styles.billRow}>
+                  <Text style={styles.billLabel}>Dishes Subtotal</Text>
+                  <Text style={styles.billValue}>₹{dishTotal}</Text>
+                </View>
+                <View style={styles.billRow}>
+                  <Text style={styles.billLabel}>Delivery Fee</Text>
+                  <Text style={styles.billValue}>₹{deliveryFee}</Text>
+                </View>
+                <View style={styles.billRow}>
+                  <Text style={styles.billLabel}>Platform Fee</Text>
+                  <Text style={styles.billValue}>₹{platformFee}</Text>
+                </View>
+                <View style={styles.billRow}>
+                  <Text style={styles.billLabel}>GST (5%)</Text>
+                  <Text style={styles.billValue}>₹{dishGst}</Text>
+                </View>
+                <View style={styles.billDivider} />
+                <View style={styles.billRow}>
+                  <Text style={styles.billTotal}>Dishes Total</Text>
+                  <Text style={styles.billTotal}>₹{dishFinalTotal}</Text>
+                </View>
+              </View>
+            )}
+          </>
+        )}
+
+        {/* Chefs Tab Content */}
+        {activeTab === "chefs" && (
+          <>
+            {chefCart.length === 0 ? (
+              <View style={styles.emptyTabContent}>
+                <Ionicons name="people-outline" size={60} color="#666" />
+                <Text style={styles.emptyTabText}>No chefs in cart</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={chefCart}
+                keyExtractor={(i) => i.id}
+                renderItem={renderChefItem}
+                scrollEnabled={false}
+              />
+            )}
+
+            {/* Chefs Bill Section */}
+            {chefCart.length > 0 && (
+              <View style={styles.billContainer}>
+                <Text style={styles.billTitle}>Chefs Bill Details</Text>
+                <View style={styles.billRow}>
+                  <Text style={styles.billLabel}>Chefs Subtotal</Text>
+                  <Text style={styles.billValue}>₹{chefTotal}</Text>
+                </View>
+                <View style={styles.billRow}>
+                  <Text style={styles.billLabel}>Platform Fee</Text>
+                  <Text style={styles.billValue}>₹{platformFee}</Text>
+                </View>
+                <View style={styles.billRow}>
+                  <Text style={styles.billLabel}>Additional Fee</Text>
+                  <Text style={styles.billValue}>₹{addFee}</Text>
+                </View>
+                <View style={styles.billRow}>
+                  <Text style={styles.billLabel}>GST (5%)</Text>
+                  <Text style={styles.billValue}>₹{chefGst}</Text>
+                </View>
+                <View style={styles.billDivider} />
+                <View style={styles.billRow}>
+                  <Text style={styles.billTotal}>Chefs Total</Text>
+                  <Text style={styles.billTotal}>₹{chefFinalTotal}</Text>
+                </View>
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
+
+      {/* Separate checkout buttons for each tab */}
+      {activeTab === "dishes" && dishCart.length > 0 && (
+        <TouchableOpacity
+          onPress={() => router.replace("/checkout")}
+          style={[styles.checkoutButton, { backgroundColor: "#FF9100" }]}
+        >
+          <Text style={styles.checkoutButtonText}>
+            Proceed to Checkout Dishes • ₹{dishFinalTotal}
+          </Text>
+          <Ionicons name="arrow-forward" size={20} color="#fff" />
+        </TouchableOpacity>
+      )}
+
+      {activeTab === "chefs" && chefCart.length > 0 && (
+        <TouchableOpacity
+          onPress={() => router.replace("/checkout")}
+          style={[styles.checkoutButton, { backgroundColor: "#FF9100" }]}
+        >
+          <Text style={styles.checkoutButtonText}>
+            Proceed to Checkout Chefs • ₹{chefFinalTotal}
+          </Text>
+          <Ionicons name="arrow-forward" size={20} color="#fff" />
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
@@ -218,13 +310,26 @@ const styles = StyleSheet.create({
   },
   headerTitle: { color: "#fff", fontSize: 20, fontWeight: "bold" },
   clearAllText: { color: "#FF9100", fontSize: 14, fontWeight: "600" },
-  sectionTitle: {
+  tabContainer: {
+    flexDirection: "row",
+    marginHorizontal: 20,
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#333",
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: "#FF9100",
+  },
+  tabText: {
     color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-    paddingHorizontal: 20,
-    marginTop: 12,
-    marginBottom: 6,
+    fontSize: 16,
+    fontWeight: "600",
   },
   cartItem: {
     flexDirection: "row",
@@ -261,7 +366,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  quantityText: { color: "#fff", marginHorizontal: 12, fontSize: 16, fontWeight: "600" },
+  quantityText: {
+    color: "#fff",
+    marginHorizontal: 12,
+    fontSize: 16,
+    fontWeight: "600",
+  },
   itemActions: {
     alignItems: "flex-end",
     justifyContent: "space-between",
@@ -275,13 +385,12 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
   },
-  emptySectionText: {
-  color: "#888",
-  fontSize: 14,
-  paddingHorizontal: 20,
-  paddingBottom: 12,
-},
-  billTitle: { color: "#fff", fontSize: 18, fontWeight: "bold", marginBottom: 12 },
+  billTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
   billRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -299,6 +408,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     padding: 16,
     borderRadius: 12,
+    marginBottom: 20,
   },
   checkoutButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
   emptyCart: {
@@ -320,16 +430,29 @@ const styles = StyleSheet.create({
     marginTop: 8,
     lineHeight: 22,
   },
+  emptyCartButtons: {
+    flexDirection: "row",
+    marginTop: 30,
+  },
   browseButton: {
     backgroundColor: "#FF9100",
-    paddingHorizontal: 30,
+    paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 25,
-    marginTop: 30,
   },
   browseButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  emptyTabContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 40,
+  },
+  emptyTabText: {
+    color: "#fff",
+    fontSize: 18,
+    marginTop: 10,
   },
 });
