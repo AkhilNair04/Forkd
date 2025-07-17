@@ -24,6 +24,7 @@ export default function FavoritesScreen() {
   const [selectedTab, setSelectedTab] = useState<"Dish" | "Chef">("Dish");
 
   const userId = useUserId();
+  console.log("fav Page userId:", userId);
 
   const { data: favoriteChefs = [], refetch: refetchFavoriteChefs } = useQuery({
     queryKey: ["favoriteChefs", userId],
