@@ -64,7 +64,11 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-image-picker",
+      {
+        "photosPermission": "Allow access to your photos to upload dish images"
+      }
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,5 +1,6 @@
 import { supabase } from "@/constants/supabase";
 import { addDish } from "@/constants/uploadDish";
+import { queryClient } from "@/lib/queryClient";
 import { AntDesign, Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { Stack, router } from "expo-router";
@@ -27,26 +28,32 @@ export default function AddDishScreen() {
   const [ingredients, setIngredients] = useState("");
   const [description, setDescription] = useState("");
   const [contains, setContains] = useState("");
-
   const [image, setImage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
 
   const pickImage = async () => {
     try {
+      // Request permissions
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Sorry, we need camera roll permissions to make this work!');
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: "images",
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        quality: 1,
         aspect: [4, 3],
+        quality: 1,
       });
 
-      if (!result.canceled && result.assets?.length > 0) {
-        console.log("Image selected:", result.assets[0].uri);
+      if (!result.canceled) {
         setImage(result.assets[0].uri);
-      } else {
-        console.log("Image selection cancelled.");
       }
     } catch (err) {
-      console.error("Error in pickImage:", err);
+      console.error("Error picking image:", err);
+      alert("Error picking image");
     }
   };
 
@@ -55,6 +62,7 @@ export default function AddDishScreen() {
       selectedCategory &&
       price.trim() &&
       quantity > 0 &&
+      image &&
       ingredients.trim() &&
       cuisine.trim() &&
       description.trim() &&
@@ -62,6 +70,10 @@ export default function AddDishScreen() {
   );
 
   const handleAddDish = async () => {
+    if (!isFormValid) return;
+    
+    setIsLoading(true);
+    
     try {
       const {
         data: { user },
@@ -69,14 +81,10 @@ export default function AddDishScreen() {
       } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        alert("Not logged in");
+        alert("Please login to add a dish");
         return;
       }
 
-      const userId = user?.id || "e62e3039-4e1a-4def-9647-debeed5f40be";
-      const chefId = userId;
-
-      // ✅ Step 2: Prepare dish payload
       const dishPayload = {
         title: itemName,
         description,
@@ -85,22 +93,24 @@ export default function AddDishScreen() {
         contains,
         tags: selectedCategory,
         price: parseFloat(price),
-        imageUri: image || "", // <- pass URI to backend
+        imageUri: image as string,
       };
 
-      // ✅ Step 3: Call addDish with chefId
-      const result = await addDish(chefId, dishPayload);
+      const result = await addDish(user.id, dishPayload);
 
-      if ("success" in result && result.success) {
-        alert("Dish Added Successfully!");
+      if (result.success) {
+        alert("Dish added successfully!");
         handleReset();
+        queryClient.invalidateQueries({ queryKey: ["chefDishes", user.id] });
         router.back();
       } else {
-        alert("Error: " + result);
+        alert(result.error || "Failed to add dish");
       }
     } catch (err) {
-      console.error("Unexpected error:", err);
-      alert("Something went wrong!");
+      console.error("Error adding dish:", err);
+      alert("Error adding dish");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -114,7 +124,6 @@ export default function AddDishScreen() {
     setContains("");
     setCuisine("");
     setDescription("");
-    console.log("Form reset to initial state");
   };
 
   return (
@@ -268,11 +277,13 @@ export default function AddDishScreen() {
           <View style={styles.footer}>
             <TouchableOpacity
               style={[styles.addButton, { opacity: isFormValid ? 1 : 0.5 }]}
-              disabled={!isFormValid}
+              disabled={!isFormValid || isLoading}
               onPress={handleAddDish}
               activeOpacity={0.8}
             >
-              <Text style={styles.addButtonText}>Add Dish</Text>
+              <Text style={styles.addButtonText}>
+                {isLoading ? "Uploading..." : "Add Dish"}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

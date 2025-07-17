@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import * as FileSystem from "expo-file-system";
 
 // Utility to generate next ID like D0001, CD0001
 async function getNextId(
@@ -14,7 +15,6 @@ async function getNextId(
 
   if (error) throw new Error(error.message);
 
-  // ✅ Cast the data to a generic record so TypeScript knows it has string keys
   const lastId =
     (data?.[0] as unknown as Record<string, string>)?.[idField] ||
     `${prefix}0000`;
@@ -33,19 +33,23 @@ export async function addDish(
     contains: string;
     tags: string;
     price: number;
+    imageUri: string;
   }
-): Promise<
-  | { success: boolean; dishId: string }
-  | {
-      success: boolean;
-      error: any;
-    }
-> {
+): Promise<{ success: boolean; dishId?: string; error?: string }> {
   try {
     // 1. Generate new dish ID
     const dishId = await getNextId("Dish", "D");
 
-    // 2. Insert into Dish table
+    
+
+    // 2. First upload the image
+    const uploadResult = await uploadDishImage(dishData.imageUri, dishId);
+    
+    if (uploadResult.error) {
+      return { success: false, error: `Image upload failed: ${uploadResult.error}` };
+    }
+
+    // 3. Insert into Dish table
     const { error: insertError } = await supabase.from("Dish").insert([
       {
         id: dishId,
@@ -53,10 +57,10 @@ export async function addDish(
         cuisine: dishData.cuisine,
         description: dishData.description,
         ingredients: dishData.ingredients,
-        contains: dishData.contains.split(",").map((item) => item.trim()), // ensure it's a text[] array
+        contains: dishData.contains.split(",").map((item) => item.trim()),
         tags: dishData.tags,
         is_veg: true,
-        is_available: true,
+        is_available: true, // Store the public URL
       },
     ]);
 
@@ -64,25 +68,24 @@ export async function addDish(
       return { success: false, error: insertError.message };
     }
 
-    // 3. Create relation in Dish_To_Chef table
-    const dishToChefId = await getNextId("Dish_To_Chef", "CD");
-
+    // 4. Get chef ID from UUID
     const { data: chefData, error: chefError } = await supabase
       .from("Chef")
       .select("id")
       .eq("uuid", chefId)
-      .maybeSingle();
+      .single();
 
-    console.log("Fetched Chef Data:", chefData?.id);
-    console.log("Generated Dish_To_Chef ID:", dishToChefId);
-    console.log("Chef ID:", chefData?.id);
-    console.log("Dish ID:", dishId);
-    console.log("Price:", dishData.price);
+    if (chefError || !chefData) {
+      return { success: false, error: chefError?.message || "Chef not found" };
+    }
+
+    // 5. Create relation in Dish_To_Chef table
+    const dishToChefId = await getNextId("Dish_To_Chef", "CD");
 
     const { error: mappingError } = await supabase.from("Dish_To_Chef").insert([
       {
         id: dishToChefId,
-        chef_id: chefData?.id,
+        chef_id: chefData.id,
         dish_id: dishId,
         dish_price: dishData.price,
       },
@@ -94,6 +97,43 @@ export async function addDish(
 
     return { success: true, dishId };
   } catch (err: any) {
-    return { success: false, error: err.message || err };
+    return { success: false, error: err.message || "Unknown error" };
+  }
+}
+
+async function uploadDishImage(
+  imageUri: string,
+  dishId: string
+): Promise<{ publicUrl: string | null; error: string | null }> {
+  try {
+    const filePath = `${dishId}/dish_img.jpg`;
+
+    // Read the image as base64
+    const base64 = await FileSystem.readAsStringAsync(imageUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    // Convert base64 to binary
+    const buffer = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+
+    // Upload to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from("dish")
+      .upload(filePath, buffer, {
+        upsert: true,
+        contentType: 'image/jpeg',
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    // Get public URL
+    const publicUrl = "hiii";
+
+    return { publicUrl, error: null };
+  } catch (error: any) {
+    console.error('Image upload errorrrrrr:', error);
+    return { publicUrl: null, error: error.message || 'Image upload failed' };
   }
 }

@@ -1,8 +1,10 @@
 import { RestrictedTabWrapper } from "@/components/RestrictedTabWrapper";
+import { deleteDish } from "@/constants/deleteDish";
 import { fetchDishesByChef } from "@/constants/fetchDishesByChef";
 import { useUserId } from "@/constants/getUserId";
+import { queryClient } from "@/lib/queryClient";
 import { AntDesign, Entypo, Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -23,12 +25,19 @@ export default function DishesScreen() {
   const [showMenuId, setShowMenuId] = useState<string | null>(null);
 
   const chefId = useUserId();
-  console.log("userId at chef-tabs :",chefId);
+  console.log("userId at chef-tabs :", chefId);
 
   const { data: dishes = [] } = useQuery({
     queryKey: ["chefDishes", chefId],
     queryFn: async () => fetchDishesByChef(chefId),
     enabled: !!chefId,
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (dishId: string) => deleteDish(dishId),
+    onSuccess: () => {
+      // Refetch chefDishes after delete
+      queryClient.invalidateQueries({ queryKey: ["chefDishes", chefId] });
+    },
   });
 
   console.log(dishes);
@@ -121,7 +130,7 @@ export default function DishesScreen() {
                     <View style={styles.ratingRow}>
                       <AntDesign name="star" size={16} color="#C67C4E" />
                       <Text style={styles.ratingText}>
-                        {item.rating_avg||"N/A"}
+                        {item.rating_avg || "N/A"}
                         <Text style={styles.reviewText}>
                           ({item.reviews ?? 0} Review)
                         </Text>
@@ -139,6 +148,12 @@ export default function DishesScreen() {
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[styles.menuItem, styles.lastMenuItem]}
+                          onPress={() => {
+                            if (item.id) {
+                              deleteMutation.mutate(item.id);
+                              setShowMenuId(null); // close menu
+                            }
+                          }}
                         >
                           <Text style={[styles.menuText, { color: "#ff4444" }]}>
                             Delete
