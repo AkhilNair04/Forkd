@@ -1,19 +1,19 @@
 // app/(onboarding-customers)/kyc_cus_name.tsx
-import React, { useEffect, useState } from 'react';
+import { supabase } from '@/constants/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
-  View,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '@/constants/supabase';
 
 export default function KycCusName() {
   const router = useRouter();
@@ -29,7 +29,6 @@ export default function KycCusName() {
         const refresh_token = await AsyncStorage.getItem('sb_refresh_token');
 
         if (access_token && refresh_token) {
-          // v2 SDK: restore session
           const { error } = await supabase.auth.setSession({
             access_token,
             refresh_token,
@@ -48,7 +47,7 @@ export default function KycCusName() {
     if (!name.trim() || priming) return;
 
     setLoading(true);
-    // now supabase.auth.getUser() should work without missing session
+
     const {
       data: { user },
       error: authErr,
@@ -60,7 +59,6 @@ export default function KycCusName() {
       return;
     }
 
-    // update full_name in user_profiles
     const { error: updateErr } = await supabase
       .from('user_profiles')
       .update({ full_name: name.trim() })
@@ -73,12 +71,10 @@ export default function KycCusName() {
       return;
     }
 
-    // go to next KYC step
     router.replace('/kyc_cus_birthday');
   };
 
   if (priming) {
-    // session is being rehydrated
     return (
       <SafeAreaView style={styles.container}>
         <ActivityIndicator color="#C67C4E" size="large" />
@@ -117,6 +113,13 @@ export default function KycCusName() {
             ) : (
               <Text style={styles.buttonText}>CONFIRM</Text>
             )}
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => router.push('/terms_and_conditions')}>
+            <Text style={styles.termsText}>
+              By continuing, you agree to our{' '}
+              <Text style={styles.linkText}>Terms and Conditions</Text>.
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -160,5 +163,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
+  },
+  termsText: {
+    color: '#aaa',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 16,
+  },
+  linkText: {
+    color: '#C67C4E',
+    textDecorationLine: 'underline',
   },
 });
