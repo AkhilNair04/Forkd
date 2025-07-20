@@ -1,10 +1,10 @@
 // app/checkout/index.tsx
-import { View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Alert } from "react-native";
-import { useCart } from "../../context/CartContext"; // <-- Add extension!
-import { useState } from "react";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useLocalSearchParams, useRouter } from "expo-router"; // Import useLocalSearchParams
+import { useEffect, useState } from "react"; // Import useEffect
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useCart } from "../../context/CartContext";
 
 // Define CartItem type (adjust fields as per your actual CartContext)
 type CartItem = {
@@ -22,11 +22,30 @@ export default function Checkout() {
   const [instructions, setInstructions] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("razorpay");
 
+  // State to hold the total after applying a coupon
+  const [appliedDiscountTotal, setAppliedDiscountTotal] = useState<number | null>(null);
+
+  // Use local search params to receive data from coupons.tsx
+  const params = useLocalSearchParams();
+  const { discountedTotal: paramDiscountedTotal } = params; // Expecting 'discountedTotal'
+
+  // Calculate base totals (before any coupon)
   const subtotal = cart.reduce((sum: number, item: CartItem) => sum + item.price * item.quantity, 0);
   const deliveryFee = 40;
   const platformFee = 5;
   const gst = Math.round((subtotal + deliveryFee) * 0.05);
-  const total = subtotal + deliveryFee + platformFee + gst;
+  const regularTotal = subtotal + deliveryFee + platformFee + gst;
+
+  // The 'total' variable will now depend on whether a coupon was applied
+  const currentDisplayedTotal = appliedDiscountTotal !== null ? appliedDiscountTotal : regularTotal;
+
+  // Effect to update the total when a discountedTotal is received from coupons.tsx
+  useEffect(() => {
+    if (paramDiscountedTotal) {
+      // Ensure it's a number and update the state
+      setAppliedDiscountTotal(parseFloat(paramDiscountedTotal as string));
+    }
+  }, [paramDiscountedTotal]); // Re-run when paramDiscountedTotal changes
 
   const validateForm = () => {
     if (!address.trim()) {
@@ -49,12 +68,12 @@ export default function Checkout() {
       return;
     }
 
-    const amountInPaise = (total * 100).toString();
+    const amountInPaise = (currentDisplayedTotal * 100).toString(); // Use currentDisplayedTotal
 
     try {
       await AsyncStorage.setItem("cartItems", JSON.stringify(cart));
       router.push({
-        pathname: "/payment",
+        pathname: "/payment", // <-- CORRECTED: Now routes to /app/payment.tsx
         params: {
           total: amountInPaise,
           address: address.replace(/\n/g, " "),
@@ -72,6 +91,14 @@ export default function Checkout() {
     } catch (error) {
       Alert.alert("Navigation Error", "Unable to proceed to payment. Please try again.");
     }
+  };
+
+  // Function to handle navigation to coupons screen
+  const handleApplyCoupon = () => {
+    router.push({
+      pathname: '/checkout/coupons', // Route to your coupons.tsx file
+      params: { currentSubtotal: subtotal.toFixed(2) }, // Pass the current subtotal to coupon screen
+    });
   };
 
   return (
@@ -102,7 +129,7 @@ export default function Checkout() {
         {/* Delivery Details */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Delivery Details</Text>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Delivery Address *</Text>
             <TextInput
@@ -146,8 +173,8 @@ export default function Checkout() {
         {/* Payment Method */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Payment Method</Text>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[styles.paymentOption, paymentMethod === "razorpay" && styles.selectedPayment]}
             onPress={() => setPaymentMethod("razorpay")}
           >
@@ -161,7 +188,7 @@ export default function Checkout() {
             <View style={[styles.radioButton, paymentMethod === "razorpay" && styles.radioSelected]} />
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.paymentOption, paymentMethod === "cod" && styles.selectedPayment]}
             onPress={() => setPaymentMethod("cod")}
           >
@@ -196,10 +223,29 @@ export default function Checkout() {
               <Text style={styles.billLabel}>GST (5%)</Text>
               <Text style={styles.billValue}>₹{gst}</Text>
             </View>
+
+            {/* Apply Coupon Button - Added Here */}
+            <TouchableOpacity style={styles.applyCouponButton} onPress={handleApplyCoupon}>
+              <Text style={styles.applyCouponText}>Apply Coupon</Text>
+              <Ionicons name="chevron-forward" size={20} color="#C67C4E" />
+            </TouchableOpacity>
+
+            {/* Display Discount Row if coupon was applied */}
+            {appliedDiscountTotal !== null && (
+              <>
+                <View style={styles.billRow}>
+                  <Text style={styles.billLabel}>Discount</Text>
+                  <Text style={[styles.billValue, { color: 'lightgreen' }]}>
+                    - ₹{(regularTotal - appliedDiscountTotal).toFixed(2)}
+                  </Text>
+                </View>
+              </>
+            )}
+
             <View style={styles.billDivider} />
             <View style={styles.billRow}>
               <Text style={styles.billTotal}>Total Amount</Text>
-              <Text style={styles.billTotal}>₹{total}</Text>
+              <Text style={styles.billTotal}>₹{currentDisplayedTotal.toFixed(2)}</Text>
             </View>
           </View>
         </View>
@@ -210,7 +256,7 @@ export default function Checkout() {
         onPress={handleCheckout}
       >
         <Text style={styles.placeOrderText}>
-          {paymentMethod === "razorpay" ? "Pay Now" : "Place Order"} • ₹{total}
+          {paymentMethod === "razorpay" ? "Pay Now" : "Place Order"} • ₹{currentDisplayedTotal.toFixed(2)}
         </Text>
         <Ionicons name="arrow-forward" size={20} color="#fff" />
       </TouchableOpacity>
@@ -378,6 +424,25 @@ const styles = StyleSheet.create({
   placeOrderText: {
     color: "#fff",
     fontSize: 16,
+    fontWeight: "bold",
+  },
+  // New styles for the Apply Coupon Button
+  applyCouponButton: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#2a2a2a", // Slightly different background
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 12, // Space from previous bill row
+    marginBottom: 12, // Space before the divider
+    borderWidth: 1,
+    borderColor: "#444",
+  },
+  applyCouponText: {
+    color: "#C67C4E", // Highlight color
+    fontSize: 15,
     fontWeight: "bold",
   },
 });
