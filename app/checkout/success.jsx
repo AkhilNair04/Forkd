@@ -45,3 +45,5 @@ const sstyles = StyleSheet.create({
   btnText: { color: '#fff', fontWeight: '600' },
   pager: { flexDirection: 'row', marginTop: 32, backgroundColor: '#2A2A2A', borderRadius: 24, padding: 8 },
 });
+
+//Codes finalized
